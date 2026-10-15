@@ -241,30 +241,17 @@ def fringe_visibility(pinhole_diameter: float, wavelength: float,
     v = math.pi * pinhole_diameter * aperture / (wavelength * z)
     if v == 0.0:
         return 1.0
-    # J1 via series/asymptotic-free small helper (scipy not required)
+    # J1 from Bessel's integral (no scipy needed)
     j1 = _bessel_j1(v)
     return abs(2.0 * j1 / v)
 
 
 def _bessel_j1(x: float) -> float:
-    """Abramowitz & Stegun 9.4.4 / 9.4.6 rational approximations for J1."""
-    ax = abs(x)
-    if ax < 8.0:
-        y = x * x
-        num = x * (72362614232.0 + y * (-7895059235.0 + y * (242396853.1 +
-              y * (-2972611.439 + y * (15704.48260 + y * (-30.16036606))))))
-        den = (144725228442.0 + y * (2300535178.0 + y * (18583304.74 +
-              y * (99447.43394 + y * (376.9991397 + y)))))
-        return num / den
-    z = 8.0 / ax
-    y = z * z
-    xx = ax - 2.356194491
-    p1 = (1.0 + y * (0.183105e-2 + y * (-0.3516396496e-4 +
-          y * (0.2457520174e-5 + y * (-0.240337019e-6)))))
-    p2 = (0.04687499995 + y * (-0.2002690873e-3 + y * (0.8449199096e-5 +
-          y * (-0.88228987e-6 + y * 0.105787412e-6))))
-    ans = math.sqrt(0.636619772 / ax) * (math.cos(xx) * p1 - z * math.sin(xx) * p2)
-    return ans if x >= 0.0 else -ans
+    """J1 from Bessel's integral J1(x) = (1/2pi) * integral over one period of cos(t - x sin t) dt.
+    The integrand is smooth and periodic, so the equally spaced (trapezoid) sum converges exponentially once
+    the node count exceeds |x|; 64 + 2|x| nodes give ~1e-15 here. (Replaces a rational approximation.)"""
+    n = 64 + 2 * int(abs(x))
+    return sum(math.cos(t - x * math.sin(t)) for t in (2.0 * math.pi * k / n for k in range(n))) / n
 
 
 def as_dict():

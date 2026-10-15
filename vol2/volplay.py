@@ -324,8 +324,8 @@ def scene_fn(vol: Volume, name, size=7.0, height=14.0):
     # straight and level AS SEEN FROM THE CAMERA / VIEWER. Targets are camera-image y values (pixels).
     if name.startswith("fwc_"):
         from .warp_scan import clean_map
-        runs_ = sorted(rig_config.RUNS.glob("*_warp_scan"))
-        X, Y, cs_, rs_, keep = clean_map(runs_[-1] if runs_ else BUNDLED / "warp_scan")
+        maps = sorted(rig_config.RUNS.glob("*_warp_scan/warp_map.npz"))    # newest COMPLETE scan, else bundled
+        X, Y, cs_, rs_, keep = clean_map(maps[-1].parent if maps else BUNDLED / "warp_scan")
         ccols = [c for j, c in enumerate(cs_) if keep[j] and np.isfinite(Y[:, j]).sum() >= 3]
         fit = {}
         for j, c in enumerate(cs_):
@@ -485,9 +485,9 @@ def play(frames, fps, seconds):
     from rig.bench import Bench
     shown = dropped = 0
     elapsed = 0.0
-    try:
-        with Bench(camera=False, min_hold_s=0.0) as b:   # lock + window; DMD dark, lock released on any exit
-            STOP.unlink(missing_ok=True)                 # we hold the rig: any STOP left over is stale
+    with Bench(camera=False, min_hold_s=0.0) as b:       # lock + window; DMD dark, lock released on any exit
+        STOP.unlink(missing_ok=True)                     # we hold the rig: any STOP left over is stale
+        try:
             dt = 1.0 / fps
             t0 = time.perf_counter()
             i = 0
@@ -504,8 +504,8 @@ def play(frames, fps, seconds):
                 shown += 1
                 i += 1
             elapsed = time.perf_counter() - t0
-    finally:
-        STOP.unlink(missing_ok=True)
+        finally:
+            STOP.unlink(missing_ok=True)                 # only ever our own STOP: we hold the rig here
     return {"target_fps": fps, "achieved_fps": round(shown / max(elapsed, 1e-9), 1), "shown": shown,
             "dropped": dropped, "seconds": round(elapsed, 1)}
 

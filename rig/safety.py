@@ -11,7 +11,8 @@ from . import config
 # Modules that could talk to the DLPC350 over USB/HID. This package never imports them; if anything in
 # the process has, refuse to drive the rig (a USB mode/source command while projecting can drop the DMD
 # into a test pattern, and LED commands could exceed the unit's current limits).
-FORBIDDEN_MODULES = ("hid", "hidapi", "usb", "usb.core", "pyusb", "pywinusb", "dmd_control")
+FORBIDDEN_MODULES = ("hid", "hidapi", "usb", "usb.core", "pyusb", "pywinusb", "usb1", "libusb", "libusb1",
+                     "pycrafter4500", "dmd_control")
 
 
 class SafetyError(RuntimeError):

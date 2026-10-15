@@ -187,7 +187,7 @@ camera  ->   \/   (camera left of the projector, looking roughly straight throug
     - **Push rate:** the HDMI window loop accepted ~225 pushes/s (console measurement, not saved).
     - **Playback:** 59.9–60.0 frames/s with 0–4 late frames over 25–30 s runs (1500–1801 frames), in the **21 scenes with playback logs**. The fw_* / fwc_* plane scenes have no logged playback stats.
     - These numbers count software pushes on a clock; nothing verified what the DMD displayed (no photodiode) [PROVED for the software loop only].
-12. **Scenes, Joey by eye** (no camera capture of the ribbons or rounded spheres):
+12. **Scenes, Joey by eye** (no camera capture of the ribbon-only scenes or the rounded spheres; `fw_ribbon`, a plane plus ribbon curtains, was captured: `docs/figures/23_fw_ribbon_camera.gif`):
     - Ribbons were best for structure and animation; other scenes: rippling curtains, ocean waves, flat / sweeping / tilted planes.
     - Spheres look like squashed diamonds: at a ~30° crossing every cross-section is a rhombus ~3.7:1 (≈ 3.5–4.2:1 over 27–32°). Graded duty rounds them off.
 13. **Stronger, flatter plane:**
@@ -236,7 +236,7 @@ camera  ->   \/   (camera left of the projector, looking roughly straight throug
 ## 5. How to run
 
 **Environment:**
-- Python 3.10+ with numpy and OpenCV (`pip install -e .[dev]`); run from the repository root.
+- Python 3.10+ with numpy and OpenCV (`pip install -e ".[dev]"`); run from the repository root.
 - The bench camera needs PySpin (FLIR Spinnaker SDK). GIF building needs Pillow.
 - All hardware access goes through `rig/` (lock, HDMI window, camera). Read `SAFETY.md` first.
 
@@ -327,7 +327,7 @@ All camera images are background-subtracted (black frame), cropped, and display-
 3. **Extend the warp correction** to the outer edges (a denser scan near cols 560–610 and 750–785). Mark dots that fall outside the case outline.
 4. **Model the inverted case:** clear acrylic floor, black base overhead.
 5. **Log playback** for the fw_* / fwc_* scenes, and verify DMD-side frame timing (photodiode or high-speed camera).
-6. **Stereo capture** (two camera positions) to document the 3D form the single camera cannot show. Capture the ribbon scenes, which have no images yet.
+6. **Stereo capture** (two camera positions) to document the 3D form the single camera cannot show. Capture the ribbon-only scenes, which have no images yet.
 7. **Run the 1440 Hz video-port pattern mode** (Joey's GUI step) and compare with 60 Hz.
 8. **Round cross-sections:** face A's light reflected off the bare back wall is ~perpendicular to face B (panel model), at the cost of extra crossings.
 9. **True voxels:** a moving screen (Geng-style helix) in air, or a two-step dye.

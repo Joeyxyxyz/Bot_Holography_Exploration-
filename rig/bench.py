@@ -80,14 +80,19 @@ class Bench:
         return acc / self.average
 
     def close(self):
+        """DMD dark -> window closed -> camera closed -> lock released. Each step runs even if an earlier one
+        fails, so the lock is never released with the camera still open. Safe to call more than once."""
+        window, camera, self.window, self.camera = self.window, self.camera, None, None
         try:
-            if self.window is not None:
-                try:
-                    self.window.dark()
-                finally:
-                    self.window.close()
-            if self.camera is not None:
-                self.camera.close()
+            try:
+                if window is not None:
+                    try:
+                        window.dark()
+                    finally:
+                        window.close()
+            finally:
+                if camera is not None:
+                    camera.close()
         finally:
             self.lock.release()
 
@@ -111,15 +116,8 @@ class _Sync:
         return self._b.shoot(pattern, raw=raw)
 
     def close(self):
-        if self._b.window is not None:
-            try:
-                self._b.window.dark()
-            finally:
-                self._b.window.close()
-                self._b.window = None
-        if self._b.camera is not None:
-            self._b.camera.close()
-            self._b.camera = None
+        """Full Bench clean-up, lock included; the caller's lock.release() afterwards is then a no-op."""
+        self._b.close()
 
 
 def open_rig():

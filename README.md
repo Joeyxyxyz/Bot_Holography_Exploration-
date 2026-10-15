@@ -7,7 +7,7 @@ These experiments put light shapes inside a small liquid-filled case with a **st
 > - A camera photo of a projected pattern is an intensity image, never a holographic reconstruction.
 > - Claims carry tags: **[PROVED]** (measured here, or arithmetic or simulation stated as such), **[ASSERTED]** (standard physics or vendor data) and **[HEURISTIC]** (judgement, a visual read, or a placeholder model).
 
-| Ribbon (stop-motion, camera) | Solid shapes from two faces | Plane before / after warp correction |
+| `fw_ribbon`: plane + ribbon curtains (stop-motion, camera) | Solid shapes from two faces | Plane before / after warp correction |
 |---|---|---|
 | ![ribbon](docs/figures/23_fw_ribbon_camera.gif) | ![solids](docs/figures/16_solid_shapes_two_faces.png) | ![warp](docs/figures/22_plane_before_after_warp_correction.png) |
 
@@ -29,32 +29,33 @@ The full story with every number and caveat is in [docs/BRIEFING.md](docs/BRIEFI
 ## Quick start (offline, any OS)
 
 ```bash
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev]"                 # use [dev] OR [bench] per environment, not both
 python -m pytest                                   # ~1-2 min; never touches hardware
 python -m vol2.volplay ribbon --dry --seconds 2    # render a scene; frames go to vol2/out/volplay/
 ```
 
-Offline work needs no bench: the ray model, the scene renders, the simulations and the OGR math checks. The player and the warp-corrected scenes use the calibration bundled in `data/calibration/`, unless a newer bench run exists in `runs/`.
+Offline work needs no bench: the ray model, the scene renders, the simulations and the OGR math checks. The player and the warp-corrected scenes use the calibration bundled in `data/calibration/`, unless a newer complete bench run exists in `runs/`.
 
 ## On the bench (Windows, Joey's rig)
 
 Read **[SAFETY.md](SAFETY.md)** first.
 
 1. Set up the hardware:
-   - The DMD is an extended display: 912 × 1140, 100 % scaling, at desktop position (1920, 0).
+   - The DMD is an extended display: 912 × 1140, 100 % scaling, at desktop position (1920, 0), with a plain black desktop background. The window refuses to open if it does not land exactly there.
    - The camera needs PySpin from the FLIR Spinnaker SDK.
-2. Install: `pip install -e ".[bench]"`.
+2. Install: `pip install -e ".[bench]"` (GUI OpenCV and pytest; do not also install `[dev]`, whose headless OpenCV conflicts).
 3. Play a scene: `python -m vol2.volplay ribbon --seconds 30`.
-   - It takes the shared rig lock, plays at 60 Hz, then leaves the DMD dark and releases the lock.
-   - To stop early, create a `STOP` file in the repo root.
+   - It takes the shared rig lock, plays at 60 Hz, blanks the DMD, closes its window and releases the lock.
+   - To stop early, create a `STOP` file in the repo root (`New-Item STOP` in PowerShell). See SAFETY.md, Stopping.
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `DLP_MONITOR_OFFSET` | `1920,0` | Desktop position of the DMD display |
 | `DLP_EXPOSURE_US` | `16667` | Camera exposure (a whole number of 60 Hz frames) |
-| `DLP_RIG_LOCK` | `%PROGRAMDATA%\swiss_army_scanner\rig.lock` | Machine-wide lock shared with the swiss-army-scanner |
 | `DLP_RUNS` | `runs/` | Where captures go (git-ignored) |
 | `DLP_NO_HARDWARE` | unset | `1` forbids opening the DMD window or camera (tests, CI, cloud sessions) |
+
+The rig lock is always the swiss-army-scanner's `%PROGRAMDATA%\swiss_army_scanner\rig.lock`, so the two programs exclude each other. It is deliberately not configurable.
 
 Calibration, sub-frame packing and the other commands are in [docs/BRIEFING.md §5](docs/BRIEFING.md#5-how-to-run).
 
@@ -64,13 +65,13 @@ Calibration, sub-frame packing and the other commands are in [docs/BRIEFING.md �
 |---|---|
 | `rig/` | **The only hardware layer:** rig lock, HDMI window, camera, `Bench`, and the safety guards |
 | `vol2/` | Two-face ray model (Snell, TIR, walk-off), rendering, simulation, scenes, the 60 Hz player, calibration, the 1440 Hz sub-frame and flash-pack writers |
-| `holo/` | Holography design and simulation (Fresnel cube, LED coherence study). Simulation only |
+| `holo/` | Holography design and simulation (Fresnel cube, LED coherence study); no hardware holography. `holo_show.py` holds a frame on the bench through `rig/` |
 | `tools/` | Bench helpers: numbered grid, frame hold loop, capture sets, GIF makers, a demo playlist |
 | `configs/` | Bench records, case maps (from projected-grid call-outs) and fitted case geometry |
 | `data/calibration/` | The bundled duty curve and warp map (bench, 2026-10-05) |
 | `data/results/` | Measured results and simulation reports |
 | `docs/` | Briefing, lab log, first-day results, figures |
-| `third_party/OGR_DMD_MathPackage_v1.0/` | The OGR DMD math package and its Lean files (`ogr.validate`: 31/31) |
+| `third_party/OGR_DMD_MathPackage_v1.0/` | Joey's OGR DMD math package and its Lean files (`ogr.validate`: 31/31); see Licence |
 | `tests/` | Offline tests: model, scenes, OGR, and the machine-safety rules |
 
 ## Working on this with Claude
@@ -84,4 +85,4 @@ Calibration, sub-frame packing and the other commands are in [docs/BRIEFING.md �
 
 ## Licence
 
-Apache-2.0 (see [LICENSE](LICENSE)). Hardware references: TI DLPU011E (DLP LightCrafter 4500 user's guide). Bit-plane volumetric display: J. Geng, *Displays* 34 (2013) 39–48.
+Apache-2.0 (see [LICENSE](LICENSE)), except `third_party/OGR_DMD_MathPackage_v1.0/`, which keeps its own terms: its README says MIT / CC-BY, and the `corpus/` files carry CC-BY 4.0 headers. Its `_bessel_j1` was replaced here by an independent implementation of Bessel's integral (see that package's `ogr/hardware.py`). Hardware references: TI DLPU011E (DLP LightCrafter 4500 user's guide). Bit-plane volumetric display: J. Geng, *Displays* 34 (2013) 39–48.

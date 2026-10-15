@@ -1,5 +1,7 @@
 # Volumetric projection into the case — status and next steps (2026-09-29, revised after review)
 
+> **Repo note:** this is the running log as written during the work, with its original file paths (e.g. `vol2/check_model.py` is now `tools/check_model.py`, results JSON are under `data/results/`). `docs/BRIEFING.md` §5 and §8 have the current layout.
+
 Tags: [PROVED] = measured here, or arithmetic/simulation stated as such; [ASSERTED] = standard physics or vendor data;
 [HEURISTIC] = judgement or placeholder model. No holographic reconstruction has been measured on hardware.
 The adversarial review (9 agents, `vol2` model + docs) and what was done about it is at the end.

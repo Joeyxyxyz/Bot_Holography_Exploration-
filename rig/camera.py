@@ -21,9 +21,10 @@ class Camera:
             self._list.Clear()
             self._sys.ReleaseInstance()
             raise RuntimeError("No FLIR camera found (check the USB3 cable).")
-        self._cam = self._list.GetByIndex(0)
-        self._cam.Init()
+        self._cam = None
         try:
+            self._cam = self._list.GetByIndex(0)
+            self._cam.Init()
             self._reset()
             self._cam.ExposureAuto.SetValue(PySpin.ExposureAuto_Off)
             self.set_exposure_us(exposure_us)
@@ -70,15 +71,22 @@ class Camera:
         self.grab()
 
     def close(self) -> None:
-        try:
-            if self._cam.IsStreaming():
-                self._cam.EndAcquisition()
-        except Exception:  # noqa: BLE001
-            pass
-        try:
-            self._cam.DeInit()
-        except Exception:  # noqa: BLE001
-            pass
-        del self._cam
-        self._list.Clear()
-        self._sys.ReleaseInstance()
+        """Idempotent; also cleans up after a failed open (camera busy, USB error)."""
+        cam, self._cam = getattr(self, "_cam", None), None
+        if cam is not None:
+            try:
+                if cam.IsStreaming():
+                    cam.EndAcquisition()
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                cam.DeInit()
+            except Exception:  # noqa: BLE001
+                pass
+            del cam                                   # PySpin: drop the camera before releasing the system
+        if getattr(self, "_list", None) is not None:
+            self._list.Clear()
+            self._list = None
+        if getattr(self, "_sys", None) is not None:
+            self._sys.ReleaseInstance()
+            self._sys = None

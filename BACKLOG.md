@@ -20,7 +20,8 @@
    - Simulate face-A light reflected off the bare back wall: it runs at about 90° to face B.
    - Weigh rounder shapes against the extra crossings.
 6. **1440 Hz sub-frames.**
-   - Unit-test `vol2/subframe.py` packing and unpacking: 24 one-bit planes per frame, slot order, round trip.
+   - The 24-plane pack / unpack round trip is already tested (`tests/test_vol2.py`).
+   - Still untested: `vol2/subframe.py`'s slot spread (`_ORDER`), the duty thresholds (round(24·d) slots lit), `raster_binary`, and `build()` output.
    - Write a simulated preview of what the eye integrates.
 7. **New scenes.**
    - Add scenes in the style of the ribbons, which looked best by eye, plus any scene `volplay` lacks.
@@ -31,7 +32,9 @@
 9. **Holography simulation (still simulation only).**
    - Extend `holo/` to show what a coherent build would need: LED with pinhole and collimator onto the bare DMD.
    - Report light budget and depth separation.
-10. **Code health.**
+10. **STOP for capture sessions.**
+    - Today only the players and holds watch `STOP`. Make `Bench.shoot` raise a clean "stopped" exception when `STOP` exists, so any rig session can be ended the same way, and update SAFETY.md.
+11. **Code health.**
     - Add a ruff lint step to CI and type hints on the public functions in `vol2/`.
     - Write a short `docs/ARCHITECTURE.md` for the ray model.
 
@@ -43,6 +46,6 @@
 - **Measure the absorption length L.** The player assumes 30 mm [HEURISTIC].
 - **Extend the warp scan** to the outer edges with a denser scan near cols 560–610 and 750–785. Flag dots that fall outside the case.
 - **Log playback** for the `fw_*` / `fwc_*` scenes. Check DMD-side timing with a photodiode or a high-speed camera.
-- **Stereo capture** from two camera positions, to record 3D form. Capture the ribbon scenes, which have no images yet.
+- **Stereo capture** from two camera positions, to record 3D form. Capture the ribbon-only scenes, which have no images yet.
 - **1440 Hz video-port pattern mode.** The GUI mode switch is Joey's. Compare it with 60 Hz.
 - **Re-run the duty calibration** (`python -m vol2.calib_duty duty`) after any LED, fill or dye change.

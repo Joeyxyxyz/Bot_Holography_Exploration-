@@ -1,6 +1,8 @@
 """Behaviour of the hardware layer with fakes: the rig lock, the safety guards, and clean-up on every exit."""
+import os
 import sys
 import types
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -48,12 +50,22 @@ def lock_is_free():
         return False
 
 
+class GuardCamera:
+    def __init__(self, *a, **k):
+        raise AssertionError("a test reached the real camera: patch rig.camera.Camera with a fake")
+
+
 @pytest.fixture
 def fake_rig(monkeypatch):
-    """Hardware allowed, but the window is a fake and the camera is absent."""
+    """Hardware guard off, so every real device class is replaced: the window by FakeWindow and the camera by a
+    guard that fails the test. A test that wants a camera patches rig.camera.Camera itself."""
+    import rig.camera
+    import rig.hdmi
     monkeypatch.delenv("DLP_NO_HARDWARE")
     FakeWindow.instances.clear()
     monkeypatch.setattr(bench, "HDMIWindow", FakeWindow)
+    monkeypatch.setattr(rig.hdmi, "HDMIWindow", FakeWindow)
+    monkeypatch.setattr(rig.camera, "Camera", GuardCamera)
     return FakeWindow
 
 
@@ -74,6 +86,24 @@ def test_lock_context_manager_releases():
 
 def test_lock_path_honours_config(tmp_path):
     assert RigLock().path == config.LOCK_PATH == tmp_path / "rig.lock"
+
+
+def test_default_lock_is_the_scanners_file():
+    """Same file as the swiss-army-scanner's RigLock, so the two programs exclude each other."""
+    assert config.default_lock(r"C:\ProgramData") == Path(r"C:\ProgramData") / "swiss_army_scanner" / "rig.lock"
+    assert RigLock(path=config.default_lock(r"C:\ProgramData")).info_path.name == "rig.info.json"
+    assert "DLP_RIG_LOCK" not in Path(config.__file__).read_text(encoding="utf-8")    # not configurable
+
+
+@pytest.mark.skipif(os.name != "nt", reason="the bench lock is msvcrt on Windows")
+def test_lock_is_a_byte_lock_on_byte_0():
+    """The scanner locks byte 0 with msvcrt.locking(LK_NBLCK, 1): a foreign handle must find byte 0 locked."""
+    import msvcrt
+    with RigLock():
+        with open(config.LOCK_PATH, "rb") as fh:
+            fh.seek(0)
+            with pytest.raises(OSError):
+                msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
 
 
 # ---------------------------------------------------------------- guards
@@ -188,6 +218,35 @@ class FakeCamera:
         self.closed = True
 
 
+def test_close_is_idempotent_and_never_repaints(fake_rig):
+    b = bench.Bench(camera=False, min_hold_s=0)
+    b.close()
+    n = len(fake_rig.instances[0].events)
+    b.close()
+    assert len(fake_rig.instances[0].events) == n and lock_is_free()
+
+
+def test_camera_closes_before_the_lock_even_if_dark_fails(fake_rig, monkeypatch):
+    import rig.camera
+    cams = []
+
+    class Cam(FakeCamera):
+        def __init__(self, *a, **k):
+            super().__init__()
+            cams.append(self)
+
+    class DarkFails(FakeWindow):
+        def dark(self):
+            raise KeyboardInterrupt                          # e.g. a second Ctrl+C during clean-up
+
+    monkeypatch.setattr(rig.camera, "Camera", Cam)
+    monkeypatch.setattr(bench, "HDMIWindow", DarkFails)
+    b = bench.Bench(camera=True, min_hold_s=0)
+    with pytest.raises(KeyboardInterrupt):
+        b.close()
+    assert cams[0].closed and fake_rig.instances[0].events[-1] == "close" and lock_is_free()
+
+
 def test_legacy_open_rig_pattern_releases(fake_rig, monkeypatch):
     import rig.camera
     monkeypatch.setattr(rig.camera, "Camera", FakeCamera)
@@ -201,3 +260,80 @@ def test_legacy_open_rig_pattern_releases(fake_rig, monkeypatch):
         lock.release()
     assert fake_rig.instances[0].events[-2:] == ["dark", "close"]
     assert lock_is_free()
+
+
+# ---------------------------------------------------------------- the real HDMIWindow, with a fake OpenCV
+class FakeCv2(types.ModuleType):
+    WINDOW_NORMAL = WND_PROP_FULLSCREEN = WINDOW_FULLSCREEN = COLOR_GRAY2BGR = 0
+
+    def __init__(self, rect):
+        super().__init__("cv2")
+        self.rect, self.calls, self.shown = rect, [], []
+
+    def namedWindow(self, *a):
+        self.calls.append("namedWindow")
+
+    def moveWindow(self, *a):
+        self.calls.append("moveWindow")
+
+    def setWindowProperty(self, *a):
+        self.calls.append("fullscreen")
+
+    def waitKey(self, *a):
+        return -1
+
+    def imshow(self, name, f):
+        self.calls.append("imshow")
+        self.shown.append(f.copy())
+
+    def getWindowImageRect(self, name):
+        return self.rect
+
+    def destroyWindow(self, name):
+        self.calls.append("destroyWindow")
+
+    def cvtColor(self, f, code):
+        return np.dstack([f, f, f])
+
+
+@pytest.fixture
+def fake_cv2(monkeypatch):
+    monkeypatch.delenv("DLP_NO_HARDWARE")
+
+    def make(rect):
+        m = FakeCv2(rect)
+        monkeypatch.setitem(sys.modules, "cv2", m)
+        return m
+    return make
+
+
+def test_window_paints_black_and_checks_its_rect_before_any_content(fake_cv2):
+    from rig.hdmi import HDMIWindow
+    cv = fake_cv2((1920, 0, W, H))
+    w = HDMIWindow()
+    assert w.rect_ok and cv.calls[:3] == ["namedWindow", "moveWindow", "fullscreen"]
+    assert len(cv.shown) == 2 and not any(f.any() for f in cv.shown)        # black, before anything else
+    w.show(np.full((H, W), 255, np.uint8))
+    w.dark()
+    assert not cv.shown[-1].any()
+    w.close()
+    assert cv.calls[-1] == "destroyWindow"
+
+
+@pytest.mark.parametrize("rect", [(0, 0, 1920, 1080), (1920, 0, 1824, 2280), (3840, 0, W, H)])
+def test_window_refuses_a_scaled_or_misplaced_display(fake_cv2, rect):
+    from rig.hdmi import HDMIWindow
+    cv = fake_cv2(rect)
+    with pytest.raises(SafetyError, match="scaled or on the wrong monitor"):
+        HDMIWindow()
+    assert cv.calls[-1] == "destroyWindow"
+    assert not any(f.any() for f in cv.shown)                             # nothing but black was shown
+
+
+def test_window_rechecks_usb_hid_on_every_frame(fake_cv2, monkeypatch):
+    from rig.hdmi import HDMIWindow
+    fake_cv2((1920, 0, W, H))
+    w = HDMIWindow()
+    monkeypatch.setitem(sys.modules, "usb1", types.ModuleType("usb1"))
+    with pytest.raises(SafetyError, match="USB/HID"):
+        w.show(np.full((H, W), 255, np.uint8))

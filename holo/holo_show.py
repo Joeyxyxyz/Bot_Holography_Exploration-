@@ -10,7 +10,7 @@ Put a hologram frame on the DMD (HDMI video mode, invert off) and hold it for be
 Takes the rig lock (holder dlp_hologram), grabs one camera frame for the record, holds until
 the STOP file (repo root) exists or the time runs out, leaves the DMD dark, releases the lock.
 The frame must be exactly 1140 x 912 (rows x cols), values 0/255: it is shown 1:1 on the mirrors,
-never scaled (HDMIWindow warns if the display is not 912x1140 at (1920, 0)).
+never scaled (HDMIWindow refuses to open if the display is not 912x1140 at (1920, 0)).
 cam.png is an intensity projection through the stock lens with incoherent LEDs, NOT a holographic
 reconstruction; meta.json next to it says so.
 No USB/HID, no LED changes (rig rules).

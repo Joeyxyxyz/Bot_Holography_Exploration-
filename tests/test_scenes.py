@@ -53,3 +53,12 @@ def test_render_is_deterministic(vol, lut):
     a, _ = vp.render_clip(vol, "ribbon", fps=10, seconds=0.1, lut=lut)
     b, _ = vp.render_clip(vol, "ribbon", fps=10, seconds=0.1, lut=lut)
     assert np.array_equal(a[0], b[0])
+
+
+def test_incomplete_warp_run_falls_back_to_bundled(vol, lut, tmp_path, monkeypatch):
+    """A refused or unfinished capture leaves runs/<ts>_warp_scan without warp_map.npz: use the bundled map."""
+    from rig import config
+    (tmp_path / "20990101T000000_warp_scan").mkdir()
+    monkeypatch.setattr(config, "RUNS", tmp_path)
+    f = vol.frame(vp.scene_fn(vol, "fwc_static")(0.0), lut)[0]
+    assert f[..., 0].any()
