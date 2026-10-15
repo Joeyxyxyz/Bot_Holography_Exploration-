@@ -1,0 +1,23 @@
+{
+    "D":  480.0,
+    "col_corner":  670.0,
+    "cpm":  2.36,
+    "rpm":  5.0,
+    "psi_deg":  2.0,
+    "row_ref":  970.0,
+    "row_base":  1095.0,
+    "fill_mm":  49.0,
+    "r_corner":  8.0,
+    "planeA_cols":  [
+                        584,
+                        654
+                    ],
+    "planeB_cols":  [
+                        684,
+                        750
+                    ],
+    "rows":  [
+                 850,
+                 1095
+             ]
+}

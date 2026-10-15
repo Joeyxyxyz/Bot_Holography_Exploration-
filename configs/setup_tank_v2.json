@@ -1,0 +1,22 @@
+{
+  "name": "tank_v2",
+  "date": "2026-10-05",
+  "source": "session notes; distances NOT re-measured with a tape on this day",
+  "case": {"same_case_as": "tank_v1 (63.1/60.1 mm acrylic, 72.95 mm tall, rounded vertical edges, 22.35 mm black base)",
+           "orientation": "UPSIDE DOWN: black base on top, original acrylic top on the stand (silicone curing)",
+           "pose": "corner-on to the projector; face A toward the camera, face B toward the projector side",
+           "back_walls": "bare acrylic (no tape)"},
+  "fill": {"liquid": "glycerin", "dye": "yellow highlighter extract (fluorescein / pyranine), faint tint",
+           "level": "liquid spans DMD rows ~850-1095 at the case (row-sweep edges, HEURISTIC)",
+           "observed": "blue beams fade by about the centre of the case (Joey, by eye)"},
+  "projector": {"device": "DLP LightCrafter 4500 (EKB 4500 MKII build), stock lens, HDMI video mode 912x1140 at (1920,0)",
+                "distance_to_case": "moved back from ~406 mm to bring the case inside the 0.5 m minimum focus; exact distance not measured",
+                "focus": "adjusted by Joey; not recorded",
+                "led_currents": "bench R35 G50 B45, unchanged (blue-only frames used)"},
+  "camera": {"device": "FLIR Blackfly S BFS-U3-16S2M", "pose": "left of the projector, looking roughly straight through face A (as tank_v1)",
+             "exposures_used_us": [66667, 100000, 200000, 500000], "filter": "none (no long-pass): glow numbers = fluorescence + scatter"},
+  "room": "lights off for captures",
+  "maps": {"grid_callouts": "case_map_tank_v2.json", "model_fit": "case_fit_tank_v4.json",
+           "warp_scan": "runs/20261005T100830_warp_scan", "duty_curve": "runs/20261005T092247_duty/duty_roi.json"},
+  "pre_run_check": "re-project the wide numbered grid and/or re-run the calibration column sweep; silhouettes should stay at ~583 / ~764 and the warp dots should not move. If they do, the case or projector moved: re-map before using fwc_* scenes."
+}

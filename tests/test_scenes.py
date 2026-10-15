@@ -1,0 +1,55 @@
+"""Offline checks of the volume player: every scene renders valid, blue-only DMD frames from the bundled
+calibration, with no hardware."""
+import numpy as np
+import pytest
+
+from vol2 import volplay as vp
+from vol2.warp_scan import clean_map
+
+SCENES = sorted(vp.SCENES)
+
+
+@pytest.fixture(scope="module")
+def lut():
+    return vp.load_duty_lut(vp.BUNDLED / "duty_roi.json")
+
+
+@pytest.fixture(scope="module")
+def vol():
+    return vp.Volume(str(vp.ROOT / "configs" / "case_fit_tank_v4.json"))
+
+
+def test_scene_list_is_complete():
+    assert len(SCENES) >= 35 and {"ribbon", "ocean", "fwc_static", "sphere_round"} <= set(SCENES)
+
+
+def test_bundled_duty_curve_is_monotone_with_a_dead_zone(lut):
+    v, g, path = lut
+    assert path.endswith("duty_roi.json")
+    assert np.all(np.diff(g) >= 0) and g[-1] == pytest.approx(1.0)
+    assert g[v <= 48].max() < 0.02                       # dead zone
+    assert vp.duty_to_level(0.0, lut) == 0 and vp.duty_to_level(1.0, lut) == 255
+    lv = vp.duty_to_level(np.linspace(0, 1, 50), lut)
+    assert np.all(np.diff(lv.astype(int)) >= 0)
+
+
+def test_bundled_warp_map_covers_the_corrected_window():
+    X, Y, cols, rows, keep = clean_map(vp.BUNDLED / "warp_scan")
+    kept = [c for c, k in zip(cols, keep) if k]
+    assert min(kept) <= 610 and max(kept) >= 750
+
+
+@pytest.mark.parametrize("scene", SCENES)
+def test_scene_renders_blue_only_dmd_frames(scene, vol, lut):
+    fn = vp.scene_fn(vol, scene)
+    frames = [vol.frame(fn(t), lut)[0] for t in np.linspace(0, vp.PERIODS[scene], 4, endpoint=False)]
+    for f in frames:
+        assert f.shape == (1140, 912, 3) and f.dtype == np.uint8
+        assert not f[..., 1].any() and not f[..., 2].any(), "player frames are blue only (fluorescein)"
+    assert any(f[..., 0].any() for f in frames), "scene lights nothing over its period"
+
+
+def test_render_is_deterministic(vol, lut):
+    a, _ = vp.render_clip(vol, "ribbon", fps=10, seconds=0.1, lut=lut)
+    b, _ = vp.render_clip(vol, "ribbon", fps=10, seconds=0.1, lut=lut)
+    assert np.array_equal(a[0], b[0])

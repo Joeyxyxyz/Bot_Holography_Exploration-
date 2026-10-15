@@ -1,0 +1,78 @@
+{
+ "band_rows_camera": [
+  595,
+  645
+ ],
+ "variants": {
+  "blue": {
+   "total": 86812.8046875,
+   "peak": 419.3629150390625,
+   "extent_px_10pct": 415,
+   "x_range_10pct": [
+    288,
+    703
+   ],
+   "total_rel_blue": 1.0
+  },
+  "green": {
+   "total": 316779.0625,
+   "peak": 3871.078369140625,
+   "extent_px_10pct": 271,
+   "x_range_10pct": [
+    413,
+    684
+   ],
+   "total_rel_blue": 3.649
+  },
+  "red": {
+   "total": 166011.96875,
+   "peak": 2344.095458984375,
+   "extent_px_10pct": 212,
+   "x_range_10pct": [
+    468,
+    680
+   ],
+   "total_rel_blue": 1.912
+  },
+  "cyan": {
+   "total": 389523.15625,
+   "peak": 4097.1064453125,
+   "extent_px_10pct": 287,
+   "x_range_10pct": [
+    412,
+    699
+   ],
+   "total_rel_blue": 4.487
+  },
+  "white": {
+   "total": 492012.71875,
+   "peak": 4906.33642578125,
+   "extent_px_10pct": 657,
+   "x_range_10pct": [
+    411,
+    1068
+   ],
+   "total_rel_blue": 5.668
+  },
+  "blue_whiteedge": {
+   "total": 726545.375,
+   "peak": 6226.6748046875,
+   "extent_px_10pct": 665,
+   "x_range_10pct": [
+    410,
+    1075
+   ],
+   "total_rel_blue": 8.369
+  },
+  "blue_greenedge": {
+   "total": 469725.875,
+   "peak": 5147.3349609375,
+   "extent_px_10pct": 659,
+   "x_range_10pct": [
+    412,
+    1071
+   ],
+   "total_rel_blue": 5.411
+  }
+ }
+}

@@ -1,0 +1,87 @@
+{
+ "band_rows_camera": [
+  590,
+  650
+ ],
+ "case_x": [
+  470,
+  800
+ ],
+ "variants": {
+  "clean_windows": {
+   "coverage": 0.682,
+   "evenness": 0.319,
+   "mean_rel": 1.0
+  },
+  "full_width": {
+   "coverage": 0.709,
+   "evenness": 0.604,
+   "mean_rel": 2.13
+  },
+  "corner_only": {
+   "coverage": 0.588,
+   "evenness": 0.072,
+   "mean_rel": 0.59
+  },
+  "corner_wide": {
+   "coverage": 0.361,
+   "evenness": 0.079,
+   "mean_rel": 1.11
+  },
+  "A_only": {
+   "coverage": 0.43,
+   "evenness": 0.183,
+   "mean_rel": 0.65
+  },
+  "B_only": {
+   "coverage": 0.57,
+   "evenness": 0.257,
+   "mean_rel": 1.04
+  },
+  "thin_2rows": {
+   "coverage": 0.715,
+   "evenness": 0.636,
+   "mean_rel": 0.58
+  },
+  "thick_12rows": {
+   "coverage": 0.709,
+   "evenness": 0.61,
+   "mean_rel": 4.31
+  },
+  "slab_40rows": {
+   "coverage": 0.709,
+   "evenness": 0.617,
+   "mean_rel": 14.92
+  },
+  "zigzag": {
+   "coverage": 0.709,
+   "evenness": 0.616,
+   "mean_rel": 1.26
+  },
+  "dotted_rods": {
+   "coverage": 0.712,
+   "evenness": 0.624,
+   "mean_rel": 1.01
+  },
+  "side_edges": {
+   "coverage": 1.0,
+   "evenness": 0.371,
+   "mean_rel": 0.33
+  },
+  "full_width_white": {
+   "coverage": 0.706,
+   "evenness": 0.397,
+   "mean_rel": 13.99
+  },
+  "corner_only_white": {
+   "coverage": 0.709,
+   "evenness": 0.168,
+   "mean_rel": 2.42
+  },
+  "blue_core_green_edge": {
+   "coverage": 0.706,
+   "evenness": 0.353,
+   "mean_rel": 14.17
+  }
+ }
+}

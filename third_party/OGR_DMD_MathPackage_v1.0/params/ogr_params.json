@@ -1,0 +1,77 @@
+{
+  "devices": {
+    "DLP4500": {
+      "name": "DLP LightCrafter 4500 (DLP4500)",
+      "n_rows": 912,
+      "n_cols": 1140,
+      "pitch": 7.56e-06,
+      "tilt_deg": 12.0,
+      "smooth_axis_deg": 45.0,
+      "diamond": true,
+      "binary_rate_hz": 4225.0,
+      "gray_rate_hz": 120.0,
+      "min_exposure_s": 0.000235
+    },
+    "DLP3010ULC": {
+      "name": "DLP3010 (ULC variant)",
+      "n_rows": 720,
+      "n_cols": 1280,
+      "pitch": 5.4e-06,
+      "tilt_deg": 17.0,
+      "smooth_axis_deg": 0.0,
+      "diamond": false,
+      "binary_rate_hz": 4225.0,
+      "gray_rate_hz": 120.0,
+      "min_exposure_s": 0.000235
+    }
+  },
+  "sources": {
+    "red": {
+      "name": "Red LED (~638 nm)",
+      "wavelength": 6.38e-07,
+      "bandwidth": 2e-08,
+      "coherence_length": 2.4e-05
+    },
+    "green": {
+      "name": "Green LED (~528 nm)",
+      "wavelength": 5.28e-07,
+      "bandwidth": 3e-08,
+      "coherence_length": 5.8e-06
+    },
+    "blue": {
+      "name": "Blue LED (~460 nm)",
+      "wavelength": 4.6e-07,
+      "bandwidth": 2.5e-08,
+      "coherence_length": 4e-06
+    }
+  },
+  "geometry": {
+    "d_dmd_wall": 0.5,
+    "d_wall_recon": 0.5,
+    "wall_albedo": 0.85,
+    "focus_min": 0.5,
+    "focus_max": 2.0,
+    "throw_ratio": 1.4
+  },
+  "derived": {
+    "dlp4500_n_mirrors": 1039680,
+    "dlp4500_aperture_short_m": 0.00689472,
+    "dlp4500_aperture_long_m": 0.0086184,
+    "fraunhofer_red_short_m": 74.50966125141066,
+    "fraunhofer_red_long_m": 116.42134570532917,
+    "fraunhofer_green_short_m": 90.03250734545456,
+    "fraunhofer_green_long_m": 140.67579272727275,
+    "recon_fov_red_500mm_m": 0.042195767195767196,
+    "recon_pixel_red_500mm_N1140_m": 3.7013830873479996e-05
+  },
+  "pattern_sequence": {
+    "bit_depth_1_min_exposure_us": 235,
+    "bit_depth_1_max_rate_hz": 4225,
+    "bit_depth_8_min_exposure_us": 8333,
+    "bit_depth_8_max_rate_hz": 120,
+    "native_width": 912,
+    "native_height": 1140,
+    "note": "TI DLPU011E. Exposure must cover dark time plus illumination."
+  },
+  "_note": "Fraunhofer thresholds are in METRES. See docs/CORRECTIONS.md C1."
+}

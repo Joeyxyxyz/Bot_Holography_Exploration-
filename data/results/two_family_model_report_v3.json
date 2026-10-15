@@ -1,0 +1,302 @@
+{
+ "case": {
+  "D": 480.0,
+  "col_corner": 670.0,
+  "row_ref": 970.0,
+  "cpm": 2.36,
+  "rpm": 5.0,
+  "psi_deg": 2.0,
+  "c0": null,
+  "r0": null,
+  "pitch_deg": 0.0,
+  "S": 61.6,
+  "t": 1.5,
+  "r_corner": 8.0,
+  "n_acr": 1.49,
+  "n_liq": 1.47,
+  "row_base": 1095.0,
+  "fill_mm": 49.0,
+  "back_walls": "tir",
+  "max_bounces": 3,
+  "planeA_cols": [
+   584,
+   654
+  ],
+  "planeB_cols": [
+   684,
+   750
+  ],
+  "rows": [
+   850,
+   1095
+  ]
+ },
+ "mirrors_traced": {
+  "A": 16515,
+  "B": 15744
+ },
+ "legs_traced": {
+  "A": 27207,
+  "B": 23299
+ },
+ "beam_mm": 1.0,
+ "crossing_angle_deg": 29.895126348127523,
+ "content": {
+  "helix": {
+   "mode": "cross",
+   "n_points": 103,
+   "block_mirrors": [
+    3,
+    5
+   ],
+   "A": {
+    "unique_pixels": 99
+   },
+   "B": {
+    "unique_pixels": 94
+   },
+   "placed": 103,
+   "dropped": 0,
+   "crossing_err_mm": {
+    "median": 0.3098720863586413,
+    "p95": 0.5539767028523115
+   },
+   "gap_mm_median": 0.3119765737775632,
+   "crossing_elongation_mm": 3.8769474759129343,
+   "on_fraction": 0.0017005232379193598,
+   "volume": {
+    "target_peak_median": 1.9454442262649536,
+    "far_beam_median": 0.6881870031356812,
+    "contrast": 2.826912187240762,
+    "lit_voxel_fraction": 0.11253656877861745
+   }
+  },
+  "lattice5": {
+   "mode": "cross",
+   "n_points": 208,
+   "block_mirrors": [
+    3,
+    5
+   ],
+   "A": {
+    "unique_pixels": 201
+   },
+   "B": {
+    "unique_pixels": 200
+   },
+   "placed": 208,
+   "dropped": 0,
+   "crossing_err_mm": {
+    "median": 0.32888841040516786,
+    "p95": 0.5078543755865033
+   },
+   "gap_mm_median": 0.3513958383721525,
+   "crossing_elongation_mm": 3.8769474759129343,
+   "on_fraction": 0.003601108033240997,
+   "volume": {
+    "target_peak_median": 1.874118149280548,
+    "far_beam_median": 0.704778254032135,
+    "contrast": 2.659160010341488,
+    "lit_voxel_fraction": 0.1793702255392246
+   }
+  },
+  "cube16_yaw0": {
+   "mode": "cross",
+   "n_points": 408,
+   "block_mirrors": [
+    3,
+    5
+   ],
+   "A": {
+    "unique_pixels": 328
+   },
+   "B": {
+    "unique_pixels": 334
+   },
+   "placed": 408,
+   "dropped": 0,
+   "crossing_err_mm": {
+    "median": 0.3967895879590293,
+    "p95": 0.5815694735616426
+   },
+   "gap_mm_median": 0.42508903748558113,
+   "crossing_elongation_mm": 3.8769474759129343,
+   "on_fraction": 0.0028316405047706986,
+   "volume": {
+    "target_peak_median": 2.1213542222976685,
+    "far_beam_median": 0.8412488698959351,
+    "contrast": 2.5216725967906335,
+    "lit_voxel_fraction": 0.13068904666146838
+   }
+  },
+  "cube12_yaw45": {
+   "mode": "cross",
+   "n_points": 300,
+   "block_mirrors": [
+    3,
+    5
+   ],
+   "A": {
+    "unique_pixels": 216
+   },
+   "B": {
+    "unique_pixels": 229
+   },
+   "placed": 300,
+   "dropped": 0,
+   "crossing_err_mm": {
+    "median": 0.3253735103725082,
+    "p95": 0.5472391271205053
+   },
+   "gap_mm_median": 0.41648473293617216,
+   "crossing_elongation_mm": 3.8769474759129343,
+   "on_fraction": 0.0018678824253616497,
+   "volume": {
+    "target_peak_median": 2.0939621925354004,
+    "far_beam_median": 0.8523328304290771,
+    "contrast": 2.456742387221279,
+    "lit_voxel_fraction": 0.09430860824651607
+   }
+  },
+  "cube16_yaw0_onlyA": {
+   "mode": "A",
+   "n_points": 408,
+   "block_mirrors": [
+    3,
+    5
+   ],
+   "A": {
+    "placed": 408,
+    "dist_mm_median": 0.17568727696009506
+   },
+   "placed": 408,
+   "dropped": 0,
+   "on_fraction": 0.0012176823638042475,
+   "volume": {
+    "target_peak_median": 1.03482186794281,
+    "far_beam_median": 0.6835459470748901,
+    "contrast": 1.5139024265612882,
+    "lit_voxel_fraction": 0.08142159477982518
+   }
+  }
+ },
+ "joint_box": {
+  "centre_mm": [
+   0.3091178047923506,
+   0.5,
+   549.2235773453597
+  ],
+  "side_mm": 16.38813559322034,
+  "joint_plan_area_mm2_all_heights": 712.9832203389832
+ },
+ "flash_pack": {
+  "image": "pack_24bit.bmp",
+  "sha256": "d4e382087a596fc39f5c5fa5880d006db51ccfbe31f7b0b07250a517a81bd7ce",
+  "round_trip_from_disk_ok": true,
+  "size": [
+   912,
+   1140
+  ],
+  "bits_per_pixel": 24,
+  "slots": [
+   {
+    "slot": 0,
+    "plane": "G0",
+    "name": "helix_ph000.0"
+   },
+   {
+    "slot": 1,
+    "plane": "G1",
+    "name": "helix_ph022.5"
+   },
+   {
+    "slot": 2,
+    "plane": "G2",
+    "name": "helix_ph045.0"
+   },
+   {
+    "slot": 3,
+    "plane": "G3",
+    "name": "helix_ph067.5"
+   },
+   {
+    "slot": 4,
+    "plane": "G4",
+    "name": "helix_ph090.0"
+   },
+   {
+    "slot": 5,
+    "plane": "G5",
+    "name": "helix_ph112.5"
+   },
+   {
+    "slot": 6,
+    "plane": "G6",
+    "name": "helix_ph135.0"
+   },
+   {
+    "slot": 7,
+    "plane": "G7",
+    "name": "helix_ph157.5"
+   },
+   {
+    "slot": 8,
+    "plane": "R0",
+    "name": "helix_ph180.0"
+   },
+   {
+    "slot": 9,
+    "plane": "R1",
+    "name": "helix_ph202.5"
+   },
+   {
+    "slot": 10,
+    "plane": "R2",
+    "name": "helix_ph225.0"
+   },
+   {
+    "slot": 11,
+    "plane": "R3",
+    "name": "helix_ph247.5"
+   },
+   {
+    "slot": 12,
+    "plane": "R4",
+    "name": "helix_ph270.0"
+   },
+   {
+    "slot": 13,
+    "plane": "R5",
+    "name": "helix_ph292.5"
+   },
+   {
+    "slot": 14,
+    "plane": "R6",
+    "name": "helix_ph315.0"
+   },
+   {
+    "slot": 15,
+    "plane": "R7",
+    "name": "helix_ph337.5"
+   }
+  ],
+  "gr_swap_is_pure_rotation": true,
+  "plane_check": {
+   "image": "plane_check_16bit.bmp",
+   "sha256": "8ae1b88bce07ae6a208e4012f78183016e664de0d2f9b93110cb4a289f47f873",
+   "round_trip_from_disk_ok": true,
+   "singles": "plane_check/slotNN.bmp",
+   "slots": 16,
+   "expect": "GUI plane G1 shows 1, R0 shows 8"
+  },
+  "gui_image_order": {
+   "N": "pack_24bit.bmp",
+   "N+1": "plane_check_16bit.bmp"
+  },
+  "suggested_exposure_us": 20000,
+  "loop_ms": 320.0,
+  "bit_depth": 1,
+  "note": "16 x 20 ms = 0.32 s per turn",
+  "procedure": "procedure.txt in this folder: Joey, 4500 MKII GUI (continuous-limit build), back up first; files only, nothing was run on the rig"
+ }
+}

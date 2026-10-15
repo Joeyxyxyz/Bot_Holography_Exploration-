@@ -1,0 +1,45 @@
+{
+    "corner_dmd_cols":  [
+                            656,
+                            684
+                        ],
+    "faces_tentative":  null,
+    "case_cells":  "cols 7-14, rows E-M",
+    "source":  "Joey call-outs on runs/20261005T072131_numgrid_wide (cells 28 cols x 49 rows; col 1 at DMD 376, row A at DMD 477), 2026-10-05, case upside down (lid on top), glycerin + highlighter, projector moved back",
+    "corner_cells":  "col 11 (Joey: \u002711 is the corner\u0027)",
+    "case_dmd_rows":  [
+                          673,
+                          1114
+                      ],
+    "note":  "faces tentative until Joey confirms; rows E-M include the lid/base (now on top?) - to be split",
+    "case_dmd_cols":  [
+                          544,
+                          768
+                      ],
+    "planes":  {
+                   "A":  {
+                             "face":  "toward camera",
+                             "cells":  "cols 7-10",
+                             "dmd_cols":  [
+                                              544,
+                                              656
+                                          ]
+                         },
+                   "B":  {
+                             "face":  "other face",
+                             "cells":  "cols 12-14",
+                             "dmd_cols":  [
+                                              684,
+                                              768
+                                          ]
+                         },
+                   "rows_glycerin_guess":  {
+                                               "cells":  "G-M",
+                                               "dmd_rows":  [
+                                                                771,
+                                                                1114
+                                                            ],
+                                               "note":  "lid (old base) assumed on top in E-F; unconfirmed"
+                                           }
+               }
+}

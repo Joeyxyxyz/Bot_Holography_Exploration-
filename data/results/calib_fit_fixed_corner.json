@@ -1,0 +1,44 @@
+{
+ "method": "manual refit 2026-10-05: corner column fixed at Joey call-out col 11 centre (670), grid over cpm 2.0-2.8 step 0.02 and psi -12..12 step 1 (vol2.calib_sweep.fit_columns), r_corner 0",
+ "inputs": {
+  "left_silhouette_col": 583.4301658533053,
+  "right_silhouette_col": 764.1785784995806,
+  "corner_col_fixed": 670.0,
+  "source": "runs/20261005T073636_calib_blue/calib.json profiles.col.edges (first rise, last fall)"
+ },
+ "fits": {
+  "430.0": {
+   "residual_cols": 0.46576060574326517,
+   "col_corner": 670.0,
+   "cpm": 2.3800000000000003,
+   "psi_deg": 2.0,
+   "D": 430.0,
+   "note": "silhouettes use the sharp outer corner (r_corner 0); rounding ~3 mm not modelled"
+  },
+  "480.0": {
+   "residual_cols": 0.46576060574326517,
+   "col_corner": 670.0,
+   "cpm": 2.3600000000000003,
+   "psi_deg": 2.0,
+   "D": 480.0,
+   "note": "silhouettes use the sharp outer corner (r_corner 0); rounding ~3 mm not modelled"
+  },
+  "530.0": {
+   "residual_cols": 0.46576060574326517,
+   "col_corner": 670.0,
+   "cpm": 2.3400000000000003,
+   "psi_deg": 2.0,
+   "D": 530.0,
+   "note": "silhouettes use the sharp outer corner (r_corner 0); rounding ~3 mm not modelled"
+  }
+ },
+ "automatic_fit_failed": {
+  "residual_cols": 4.131300222931825,
+  "col_corner": 698.3502715285563,
+  "cpm": 2.4600000000000004,
+  "psi_deg": -12.0,
+  "D": 406.0,
+  "note": "silhouettes use the sharp outer corner (r_corner 0); rounding ~3 mm not modelled"
+ },
+ "caveat": "2 measured edges vs 2 free parameters (cpm, psi) with D unconstrained: exactly determined, not a test; [HEURISTIC]"
+}
