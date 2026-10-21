@@ -62,3 +62,10 @@ def test_incomplete_warp_run_falls_back_to_bundled(vol, lut, tmp_path, monkeypat
     monkeypatch.setattr(config, "RUNS", tmp_path)
     f = vol.frame(vp.scene_fn(vol, "fwc_static")(0.0), lut)[0]
     assert f[..., 0].any()
+
+
+def test_frame_clips_mirrors_off_the_dmd(vol, lut):
+    """A block wholly off the DMD lights nothing; a negative slice end must not wrap to the far edge."""
+    for c, r in ((400, -4), (400, -10), (-3, 600), (-50, -50), (912 + 1, 600), (400, 1140 + 2)):
+        assert not vol.frame([([(c, r)], 1.0, 0.0)], lut)[0].any(), (c, r)
+    assert np.count_nonzero(vol.frame([([(400, -2)], 1.0, 0.0)], lut)[0][..., 0]) == 3   # one row on the DMD

@@ -162,6 +162,8 @@ class Volume:
         for (mirrors, _, _), dc in zip(elements, comp):
             dd = dc / norm
             for c, r in mirrors:
+                if r + wr // 2 < 0 or c + wc // 2 < 0:   # wholly off the DMD: a negative slice end would wrap
+                    continue
                 sl = (slice(max(0, r - wr // 2), min(H, r + wr // 2 + 1)), slice(max(0, c - wc // 2), min(W, c + wc // 2 + 1)))
                 dmap[sl] = np.maximum(dmap[sl], dd)
         f = np.zeros((H, W, 3), np.uint8)

@@ -50,6 +50,8 @@ def raster_binary(elements, duty_slot, wc=3, wr=5):
         if not d > duty_slot:                     # not `d <= duty_slot`: a NaN duty must stay off
             continue
         for c, r in mirrors:
+            if r + wr // 2 < 0 or c + wc // 2 < 0:   # wholly off the DMD: a negative slice end would wrap
+                continue
             f[max(0, r - wr // 2):min(H, r + wr // 2 + 1), max(0, c - wc // 2):min(W, c + wc // 2 + 1)] = 255
     return f
 

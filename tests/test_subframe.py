@@ -91,6 +91,14 @@ def test_raster_binary_blocks_threshold_and_edges():
     assert np.count_nonzero(sf.raster_binary([([(W - 1, H - 1)], 1.0, 0.0)], 0.5)) == 2 * 3   # DMD corners
 
 
+def test_raster_binary_clips_mirrors_off_the_dmd():
+    """A block wholly off the DMD lights nothing; a negative slice end must not wrap to the far edge."""
+    for c, r in ((400, -4), (400, -10), (-3, 600), (-50, -50), (W + 1, 600), (400, H + 2)):
+        assert not sf.raster_binary([([(c, r)], 1.0, 0.0)], 0.5).any(), (c, r)
+    assert np.count_nonzero(sf.raster_binary([([(400, -2)], 1.0, 0.0)], 0.5)) == 3       # one row on the DMD
+    assert np.count_nonzero(sf.raster_binary([([(-1, 600)], 1.0, 0.0)], 0.5)) == 5       # one column
+
+
 def test_raster_binary_lights_what_the_60hz_rasteriser_lights(vol, lut):
     for scene, t in (("ribbon", 0.3), ("sphere_round", 0.0), ("fw_ribbon", 0.7)):
         els = vp.scene_fn(vol, scene)(t)
