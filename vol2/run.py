@@ -19,7 +19,7 @@ import cv2
 import numpy as np
 
 from . import flashpack, simulate
-from .geometry import Case, crossing_angle_deg
+from .geometry import Case, crossing_angle_deg, load_case_json
 from .render import Plane, coverage, cube_points, helix_points, joint_box, lattice_points, render
 
 OUT = Path(__file__).parent / "out"
@@ -42,8 +42,7 @@ def save_views(path, vw):
 
 
 def build(fill="water", back_walls="tir", beam_mm=1.0, case_json=None, tag=""):
-    over = json.loads(Path(case_json).read_text(encoding="utf-8-sig")) if case_json else {}
-    over = {k: (tuple(v) if isinstance(v, list) else v) for k, v in over.items()}
+    over = load_case_json(case_json)[0] if case_json else {}
     case = Case(**{"n_liq": N_LIQ[fill], "back_walls": back_walls, **over})
     out = OUT / (f"{fill}_{back_walls}" + (f"_{tag}" if tag else ""))
     out.mkdir(parents=True, exist_ok=True)

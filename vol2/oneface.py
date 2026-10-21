@@ -23,7 +23,7 @@ import cv2
 import numpy as np
 
 from . import simulate
-from .geometry import Case, Rays, crossing_angle_deg
+from .geometry import Case, Rays, crossing_angle_deg, load_case_json
 from .render import Plane, coverage, joint_box
 from .rods import family_axes, layer_mirrors
 from .anim import still_shapes, render_layers
@@ -55,8 +55,7 @@ def one_face_planes(case: Case, face="B"):
 
 
 def build(case_json, fill="glycerin", tag="v3", n_layers=13):
-    over = json.loads(Path(case_json).read_text(encoding="utf-8-sig"))
-    over = {k: (tuple(v) if isinstance(v, list) else v) for k, v in over.items()}
+    over, _ = load_case_json(case_json)
     case = Case(**{"n_liq": N_LIQ[fill], "back_walls": "tir", **over})
     planes, full = one_face_planes(case, "B")
     out = OUT / f"oneface_{fill}_{tag}"

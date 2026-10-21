@@ -33,7 +33,7 @@ sys.path.insert(0, str(ROOT))
 
 from rig import config as rig_config  # noqa: E402 - paths only, no hardware
 
-from .geometry import Case  # noqa: E402
+from .geometry import Case, load_case_json  # noqa: E402
 from .render import H, W, Plane  # noqa: E402
 from .rods import family_axes  # noqa: E402
 from .run import N_LIQ  # noqa: E402
@@ -74,8 +74,7 @@ def duty_to_level(duty, lut):
 # ---------------------------------------------------------------- scene elements
 class Volume:
     def __init__(self, case_json, fill="glycerin", where=(40.0, 40.0), mode="ab", L=30.0):
-        over = json.loads(Path(case_json).read_text(encoding="utf-8-sig"))
-        over = {k: (tuple(v) if isinstance(v, list) else v) for k, v in over.items()}
+        over, _ = load_case_json(case_json)
         self.case = Case(**{"n_liq": N_LIQ[fill], "back_walls": "tir", **over})
         self.planes = {f: Plane(self.case, f) for f in ("A", "B")}
         self.axes = family_axes(self.planes)

@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 
 from . import flashpack
-from .geometry import Case
+from .geometry import Case, load_case_json
 from .render import H, W, Plane, draw, joint_box
 from .rods import family_axes, layer_mirrors
 from .run import N_LIQ
@@ -82,8 +82,7 @@ def _morph(u, t):
 def build(case_json, fill="glycerin", tag="v3", n_frames=16, n_layers=13, where="joint", size_mm=None):
     """where = "joint": largest jointly reachable square (toward the back corner, where the beams have faded);
     where = "middle": the centre of the liquid (Joey: beams fade about the centre -> float things there)."""
-    over = json.loads(Path(case_json).read_text(encoding="utf-8-sig"))
-    over = {k: (tuple(v) if isinstance(v, list) else v) for k, v in over.items()}
+    over, _ = load_case_json(case_json)
     case = Case(**{"n_liq": N_LIQ[fill], "back_walls": "tir", **over})
     planes = {f: Plane(case, f) for f in ("A", "B")}
     axes = family_axes(planes)

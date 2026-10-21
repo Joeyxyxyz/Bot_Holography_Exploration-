@@ -56,6 +56,20 @@ def test_scene_frames_match_golden(scene, vol, lut, golden):
     assert frame_hashes(vol, lut, scene) == golden[scene], f"{scene}: frames differ from the recorded snapshot"
 
 
+def test_case_file_sections_are_split_from_case_fields(tmp_path):
+    """A case file carries its scene windows next to the fit; every loader gets Case fields only, and a misspelt
+    field still fails instead of being dropped."""
+    from vol2.geometry import Case, load_case_json
+    p = tmp_path / "case.json"
+    p.write_text(json.dumps({"D": 480.0, "rows": [850, 1095], "scene_windows": {"clean_A": [588, 643]}}))
+    over, extra = load_case_json(p)
+    assert over == {"D": 480.0, "rows": (850, 1095)} and extra == {"scene_windows": {"clean_A": [588, 643]}}
+    Case(**over)
+    p.write_text(json.dumps({"D": 480.0, "r_coner": 12}))
+    with pytest.raises(TypeError, match="r_coner"):
+        Case(**load_case_json(p)[0])
+
+
 def record():
     """Write the golden file from the current code (bundled calibration only: runs/ is pointed elsewhere)."""
     import os
