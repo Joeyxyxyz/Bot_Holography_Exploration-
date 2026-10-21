@@ -19,8 +19,9 @@
   let view = store.get("view", "simulated");
   const settings = Object.assign({}, DEFAULTS, store.get("settings", {}));
   let playlist = store.get("playlist", []);
-  let startedHere = false;              // this page started the running job (closing it stops the job)
+  let myJob = null;                     // id of the job this page started (closing the page stops only that job)
   let wasBusy = false;
+  let infoDismissed = false;
 
   async function api(path, body, extra) {
     const opt = body === undefined
@@ -60,7 +61,7 @@
     b.hidden = false;
   }
   function infoBanner() {                // the standing note in preview-only mode
-    if (STATE && !STATE.hardware && !bannerIsError) {
+    if (STATE && !STATE.hardware && !bannerIsError && !infoDismissed) {
       banner("Preview only: this studio was started with DLP_NO_HARDWARE=1. Scenes preview and simulate here; playing on the projector is off.");
     }
   }
@@ -352,9 +353,13 @@
       if (e.key === "Escape" && !e.repeat) { e.preventDefault(); stop(); }
     });
     window.addEventListener("pagehide", () => {               // closing or reloading the page stops its job
-      if (startedHere && STATE && STATE.busy) api("/api/stop", {}, { keepalive: true });
+      if (myJob && STATE && STATE.busy && STATE.job === myJob) api("/api/stop", { job: myJob }, { keepalive: true });
     });
-    $("banner").querySelector(".close").addEventListener("click", () => { banner(""); infoBanner(); });
+    $("banner").querySelector(".close").addEventListener("click", () => {
+      if (!bannerIsError) infoDismissed = true;               // the preview-only note stays closed
+      banner("");
+      infoBanner();
+    });
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) api("/api/check-rig", {}).then(poll);
     });
@@ -371,7 +376,7 @@
     banner("");
     const r = await api(path, body);
     if (!r.ok) banner(r.data.error || `Could not ${what}.`, true);
-    else startedHere = true;
+    else { myJob = r.data.job || null; wasBusy = true; }
     infoBanner();
     poll();
     return r;
@@ -391,7 +396,7 @@
   }
 
   async function stop() {
-    $("status").textContent = "Stopping…";
+    $("status").textContent = lastStatus = "Stopping…";
     const r = await api("/api/stop", {});
     if (!r.ok) banner(r.data.error || "Could not reach the studio to stop. Press Ctrl+C in its console.", true);
     poll();
@@ -558,10 +563,8 @@
     polling = false;
     if (r.ok) {
       STATE = r.data;
-      if (wasBusy && !STATE.busy) {                              // a job just ended
-        startedHere = false;
-        api("/api/check-rig", {});
-      }
+      if (myJob && STATE.job !== myJob) myJob = null;           // our job ended (or was never seen running)
+      if (wasBusy && !STATE.busy) api("/api/check-rig", {});    // a job just ended: refresh the rig status
       wasBusy = STATE.busy;
       renderState();
     } else {

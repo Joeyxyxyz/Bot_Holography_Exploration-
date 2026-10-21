@@ -13,11 +13,11 @@ goto done
 "%HOLO_PYTHON%" -m studio %*
 :done
 echo.
-if errorlevel 1 goto failed
+if %ERRORLEVEL% NEQ 0 goto failed
 echo Holo Studio has stopped. The projector is dark and the rig is released.
 goto end
 :failed
 echo Holo Studio did not start, or stopped with an error (see above).
-echo If another studio is already running, use its page: http://127.0.0.1:8765/
+echo If another studio is already running, open its page instead (http://127.0.0.1:8765/ by default).
 :end
 pause

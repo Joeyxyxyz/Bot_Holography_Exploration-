@@ -193,7 +193,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         studio = self.server.studio
         routes = {"/api/play": studio.submit_play, "/api/playlist": studio.submit_playlist,
-                  "/api/grid": studio.submit_grid, "/api/stop": lambda b: studio.stop(),
+                  "/api/grid": studio.submit_grid, "/api/stop": studio.stop,
                   "/api/check-rig": lambda b: studio.check_rig()}
         fn = routes.get(urlsplit(self.path).path)
         if fn is None:

@@ -483,3 +483,59 @@ def test_stale_stopall_is_ignored_and_a_fresh_one_ends_the_playlist(live):
     config.STOPALL.touch()
     s = wait_idle(live)
     assert s["last"]["status"] == "stopped" and len(s["last"]["results"]) == 1 and "STOPALL" in s["last"]["message"]
+
+
+# ---------------------------------------------------------------- second review round
+def test_stop_while_idle_then_play_at_once_still_plays(live):
+    live.stop()                                               # leaves the studio's own STOP file behind
+    time.sleep(0.2)
+    live.submit_play({"scene": "plane_flat", "seconds": 1})
+    s = wait_idle(live)
+    assert s["last"]["status"] == "done" and len(FakeWindow.instances) == 1
+
+
+def test_stop_during_render_then_play_again_plays(live, monkeypatch):
+    real = clips.render_clip
+
+    def slow_render(s, seconds, cancel=None, progress=None):
+        for i in range(100):
+            if progress:
+                progress(i + 1, 200)
+            time.sleep(0.01)
+        return real(s, seconds, cancel=cancel, progress=None)
+    monkeypatch.setattr(engine.clips, "render_clip", slow_render)
+    live.submit_play({"scene": "plane_flat", "seconds": 1})
+    wait_activity(live, "preparing")
+    live.stop()
+    assert wait_idle(live)["last"]["status"] == "stopped"
+    live.submit_play({"scene": "fw_static", "seconds": 1})
+    s = wait_idle(live)
+    assert s["last"]["status"] == "done" and len(FakeWindow.instances) == 1
+
+
+def test_stop_button_is_not_reported_as_the_stop_file(live):
+    live.submit_play({"scene": "plane_flat", "seconds": 10})
+    wait_activity(live, "playing")
+    time.sleep(0.2)
+    live.stop()
+    s = wait_idle(live)
+    assert s["last"]["status"] == "stopped" and "STOP file" not in (s["last"].get("message") or "")
+
+
+def test_busy_holder_is_reported_once(live):
+    with RigLock(holder="swiss_army_scanner"):
+        live.submit_play({"scene": "plane_flat", "seconds": 1})
+        s = wait_idle(live)
+    holder = s["rig"]["holder"]
+    assert "swiss_army_scanner" in holder and "in use by another program" not in holder
+
+
+def test_a_closing_page_stops_only_its_own_job(live):
+    r = live.submit_play({"scene": "plane_flat", "seconds": 10})
+    assert r["job"] and live.snapshot()["job"] == r["job"]
+    wait_activity(live, "playing")
+    assert live.stop({"job": "someone-else"}) == {"stopping": False}
+    time.sleep(0.3)
+    assert live.snapshot()["activity"] == "playing"           # untouched by another page closing
+    assert live.stop({"job": r["job"]}) == {"stopping": True}
+    assert wait_idle(live)["last"]["status"] == "stopped"

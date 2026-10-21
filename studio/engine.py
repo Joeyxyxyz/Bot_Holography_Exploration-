@@ -13,6 +13,7 @@ from __future__ import annotations
 import collections
 import dataclasses
 import queue
+import secrets
 import threading
 import time
 import traceback
@@ -62,6 +63,7 @@ class Job:
     cancel: threading.Event = dataclasses.field(default_factory=threading.Event)
     created: float = dataclasses.field(default_factory=time.time)
     stopped_by: str = ""
+    id: str = dataclasses.field(default_factory=lambda: secrets.token_hex(4))
 
 
 def _seconds(d, lo, hi, default):
@@ -179,6 +181,8 @@ class Studio:
         self._log = collections.deque(maxlen=40)
         self._state = {"activity": "idle", "now": None, "last": None}
         self._rig = {"free": None, "holder": "", "checked": None}
+        self._probe_lock = threading.Lock()    # probes and job registration never overlap (no self-inflicted busy)
+        self._own_stop = None                  # (mtime, time) of the STOP file this studio last created
         self.check_rig()
         self.log("Studio started" + ("" if self.hardware else " in preview-only mode (DLP_NO_HARDWARE is set)"))
         self.log(f"Duty curve: {clips.duty_lut()[2]}")
@@ -191,14 +195,16 @@ class Studio:
 
     def check_rig(self):
         """Probe the shared lock for the status display. Never in preview-only mode (the lock file is left alone)
-        and never while a job runs (the job holds or is about to take the lock; the main thread probes itself)."""
-        with self._lock:
-            if not self.hardware or self._job is not None:
-                return dict(self._rig)
-        self._probe()
+        and never while a job runs (the job holds or is about to take the lock; it probes on its own thread)."""
+        with self._probe_lock:
+            with self._lock:
+                if not self.hardware or self._job is not None:
+                    return dict(self._rig)
+            self._probe_locked()
         return dict(self._rig)
 
-    def _probe(self):
+    def _probe_locked(self):
+        """Caller holds _probe_lock."""
         free, holder = probe()
         with self._lock:
             self._rig = {"free": free, "holder": holder, "checked": time.strftime("%H:%M:%S")}
@@ -208,7 +214,7 @@ class Studio:
         with self._lock:
             return {"hardware": self.hardware, "activity": self._state["activity"], "now": self._state["now"],
                     "last": self._state["last"], "rig": dict(self._rig), "log": list(self._log),
-                    "busy": self._job is not None}
+                    "busy": self._job is not None, "job": self._job.id if self._job is not None else None}
 
     def submit_play(self, body) -> dict:
         s = self._settings(body)
@@ -236,19 +242,39 @@ class Studio:
         sec = _seconds(body if isinstance(body, dict) else {}, *GRID_SECONDS, 60.0)
         return self._submit(Job("grid", [Item("grid", "Numbered grid (case check)", sec)]))
 
-    def stop(self) -> dict:
+    def stop(self, body=None) -> dict:
         """Stop whatever runs: this studio's whole job, and (through the STOP file) any player started from this
-        repository folder."""
+        repository folder. With {"job": id} (a page closing) only that job is stopped, and nothing else is touched."""
+        only = body.get("job") if isinstance(body, dict) else None
         with self._lock:
             job = self._job
+        if only is not None and (job is None or job.id != only):
+            return {"stopping": False}
         if job is not None:
             job.cancel.set()
         try:
             config.STOP.touch()
+            mtime = config.STOP.stat().st_mtime
+            with self._lock:
+                self._own_stop = (mtime, time.time())
         except OSError as e:
             self.log(f"could not create the STOP file: {e}")
-        self.log("STOP pressed" if job is not None else "STOP pressed (nothing playing here)")
+        self.log(("page closed: stopping its job" if only else "STOP pressed") if job is not None
+                 else "STOP pressed (nothing playing here)")
         return {"stopping": job is not None}
+
+    def _clear_own_stale_stop(self, job):
+        """A STOP file this studio created before `job` was submitted (STOP pressed while idle, or a job stopped
+        before its player ran) is ours and stale: remove it so it cannot stop the new job."""
+        with self._lock:
+            own = self._own_stop
+        if own is None or own[1] >= job.created:
+            return
+        try:
+            if config.STOP.stat().st_mtime == own[0]:
+                config.STOP.unlink()
+        except OSError:
+            pass
 
     def _settings(self, d) -> clips.Settings:
         try:
@@ -263,7 +289,7 @@ class Studio:
     def _submit(self, job: Job) -> dict:
         if not self.hardware:
             raise Refused("Preview only: DLP_NO_HARDWARE is set, so this studio may not drive the projector.")
-        with self._lock:
+        with self._probe_lock, self._lock:
             if self._job is not None:
                 raise Refused("Something is already playing. Press STOP first.")
             self._job = job
@@ -271,7 +297,7 @@ class Studio:
             self._state["now"] = {"kind": job.kind, "title": job.items[0].title, "index": 1, "count": len(job.items)}
         self._queue.put(job)
         self.log(f"queued: {', '.join(i.title for i in job.items)}")
-        return {"queued": True}
+        return {"queued": True, "job": job.id}
 
     # ---------------------------------------------------------------- main thread
     def run_forever(self, until=None):
@@ -313,8 +339,11 @@ class Studio:
 
     def _run(self, job: Job):
         results = []
+        holder = ""
         try:
-            free, holder = self._probe()                 # main thread: never races our own Bench
+            self._clear_own_stale_stop(job)
+            with self._probe_lock:                       # no HTTP probe can hold the lock as we start
+                free, holder = self._probe_locked()
             if not free:
                 raise RigBusy(f"the camera + DMD are in use by another program ({holder}).")
             for n, item in enumerate(job.items, 1):
@@ -340,8 +369,9 @@ class Studio:
                 results.append({"title": item.title, **res})
                 self.log(f"done {item.title}: {res['achieved_fps']} fps, {res['dropped']} late frames")
                 if res.get("stopped"):
-                    job.stopped_by = job.stopped_by or "STOP file"
-                    job.cancel.set()
+                    if not job.cancel.is_set():          # not the page's STOP button: someone made a STOP file
+                        job.stopped_by = job.stopped_by or "STOP file"
+                        job.cancel.set()
                     break
             stopped = job.cancel.is_set()
             self._finish(job, {"status": "stopped" if stopped else "done", "results": results})
@@ -353,7 +383,7 @@ class Studio:
         except RigBusy as e:
             self._finish(job, {"status": "busy", "message": str(e), "results": results})
             with self._lock:
-                self._rig = {"free": False, "holder": str(e), "checked": time.strftime("%H:%M:%S")}
+                self._rig = {"free": False, "holder": holder or "unknown holder", "checked": time.strftime("%H:%M:%S")}
             self.log(f"rig busy: {e}")
         except SafetyError as e:
             self._finish(job, {"status": "refused", "message": str(e), "results": results})

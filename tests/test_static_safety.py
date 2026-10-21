@@ -45,14 +45,24 @@ WINDOW_CALLS = {"namedWindow", "imshow", "setWindowProperty", "moveWindow"}
 DEVICE_CLASSES = {"HDMIWindow", "Camera", "RigLock"}
 # Outside rig/: no other route to devices or other programs (process launch, native calls, dynamic imports,
 # other display toolkits). Add a narrow exception here, with a reason, if one is ever really needed.
-BANNED_MODULES_OUTSIDE_RIG = {"subprocess", "ctypes", "cffi", "importlib", "pygame", "pyglet", "tkinter", "PyQt5",
-                              "PyQt6", "PySide2", "PySide6", "wx", "serial", "socket", "PySpin", "webbrowser",
-                              "http", "socketserver", "asyncio"}
-# The only exceptions (each reviewed; see SAFETY.md, Holo Studio):
+# A module is banned when its dotted name equals or starts with an entry ("urllib.request" bans urllib.request.*
+# but leaves urllib.parse alone).
+BANNED_MODULES_OUTSIDE_RIG = {"subprocess", "multiprocessing", "ctypes", "cffi", "importlib", "pygame", "pyglet",
+                              "tkinter", "PyQt5", "PyQt6", "PySide2", "PySide6", "wx", "serial", "socket", "ssl",
+                              "PySpin", "webbrowser", "http", "socketserver", "asyncio", "urllib.request", "ftplib",
+                              "smtplib", "telnetlib", "xmlrpc"}
+# The only exceptions, by exact module, each reviewed (see SAFETY.md, Holo Studio):
 #   studio/server.py   http.server  - the studio's local web server, bound to 127.0.0.1 only
 #   studio/__main__.py webbrowser   - opens the studio page (a fixed http://127.0.0.1 URL) in the browser
-ALLOWED_OUTSIDE_RIG = {"studio/server.py": {"http"}, "studio/__main__.py": {"webbrowser"}}
-BANNED_CALLS_OUTSIDE_RIG = {"__import__", "system", "startfile", "popen", "spawnl", "spawnv", "execv", "execl"}
+ALLOWED_OUTSIDE_RIG = {"studio/server.py": {"http.server"}, "studio/__main__.py": {"webbrowser"}}
+BANNED_CALLS_OUTSIDE_RIG = {"__import__", "system", "startfile", "popen", "urlopen", "posix_spawn", "posix_spawnp",
+                            *(f"exec{s}" for s in ("l", "le", "lp", "lpe", "v", "ve", "vp", "vpe")),
+                            *(f"spawn{s}" for s in ("l", "le", "lp", "lpe", "v", "ve", "vp", "vpe"))}
+
+
+def _banned(module: str, allowed=()) -> bool:
+    hit = any(module == b or module.startswith(b + ".") for b in BANNED_MODULES_OUTSIDE_RIG)
+    return hit and module not in allowed
 
 
 def _tree(p):
@@ -111,8 +121,9 @@ def test_hardware_only_through_rig(p):
     tree = _tree(p)
     allowed = ALLOWED_OUTSIDE_RIG.get(_rel(p), set())
     for node, mod, asname, name in _imports(tree):
-        top = mod.split(".")[0]
-        assert top not in BANNED_MODULES_OUTSIDE_RIG or top in allowed, f"{_rel(p)}:{node.lineno} imports {mod}"
+        full = mod if name is None else f"{mod}.{name}"          # "from http import client" -> http.client
+        assert not _banned(mod, allowed) or (name is not None and not _banned(full, allowed)), \
+            f"{_rel(p)}:{node.lineno} imports {full}"
         if mod.split(".")[0] == "rig":
             assert name not in DEVICE_CLASSES, f"{_rel(p)}:{node.lineno} imports {name}: use rig.bench.Bench"
             assert not (asname and name in ("Bench", "open_rig")), \
@@ -164,3 +175,8 @@ def test_bench_is_entered_with_a_context_manager(p):
     for n in ast.walk(tree):
         if isinstance(n, ast.Call) and _name(n.func) == "Bench":
             assert id(n) in with_ctx, f"{_rel(p)}:{n.lineno} Bench(...) outside a with-statement"
+
+
+def test_banned_module_matching():
+    assert _banned("http.client", {"http.server"}) and not _banned("http.server", {"http.server"})
+    assert _banned("urllib.request") and not _banned("urllib.parse") and _banned("multiprocessing.pool")
