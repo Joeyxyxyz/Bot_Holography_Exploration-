@@ -62,3 +62,21 @@ def test_incomplete_warp_run_falls_back_to_bundled(vol, lut, tmp_path, monkeypat
     monkeypatch.setattr(config, "RUNS", tmp_path)
     f = vol.frame(vp.scene_fn(vol, "fwc_static")(0.0), lut)[0]
     assert f[..., 0].any()
+
+
+def test_frame_clips_mirrors_off_the_dmd(vol, lut):
+    """A block wholly off the DMD lights nothing; a negative slice end must not wrap to the far edge."""
+    for c, r in ((400, -4), (400, -10), (-3, 600), (-50, -50), (912 + 1, 600), (400, 1140 + 2)):
+        assert not vol.frame([([(c, r)], 1.0, 0.0)], lut)[0].any(), (c, r)
+    assert np.count_nonzero(vol.frame([([(400, -2)], 1.0, 0.0)], lut)[0][..., 0]) == 3   # one row on the DMD
+
+
+def test_a_frame_whose_duties_are_all_zero_is_black(vol, lut):
+    """A fade to zero must not renormalise 0 / 0 = NaN: casting a NaN level to uint8 is undefined, so the frame
+    would be black only by luck of the platform."""
+    with np.errstate(all="raise"):                                        # no 0 / 0 and no NaN cast
+        f, norm = vol.frame([([(400, 600)], 0.0, 0.0), ([(500, 700)], 0.0, 3.0)], lut)
+    assert not f.any() and norm == 1.0
+    assert vol.frame([], lut)[1] == 1.0
+    f = vol.frame([([(400, 600)], 0.0, 0.0), ([(500, 700)], 0.5, 0.0)], lut)[0][..., 0]
+    assert f[600, 400] == 0 and f[700, 500] == 255                        # a lit element still renormalises to 1

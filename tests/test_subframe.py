@@ -1,0 +1,228 @@
+"""Offline checks of the 1440 Hz sub-frame packer (vol2/subframe.py): the slot spread, the duty thresholds, the
+1-bit rasteriser, and what build() and plane_check() write. Files go to a pytest tmp_path; nothing is projected.
+The 24-plane pack / unpack round trip itself is in test_vol2.py."""
+import json
+from types import SimpleNamespace
+
+import cv2
+import numpy as np
+import pytest
+
+from vol2 import flashpack
+from vol2 import subframe as sf
+from vol2 import volplay as vp
+
+H, W = 1140, 912
+# the slot a growing duty lights next: 5-bit bit reversal of 0..23, ranked (halves, quarters, eighths, ...)
+ORDER = [0, 12, 6, 18, 3, 15, 9, 21, 2, 14, 8, 20, 5, 17, 11, 23, 1, 13, 7, 19, 4, 16, 10, 22]
+
+
+def lit_slots(d):
+    return np.nonzero(d > sf._THR)[0]
+
+
+@pytest.fixture(scope="module")
+def vol():
+    return vp.Volume(str(vp.ROOT / "configs" / "case_fit_tank_v4.json"))
+
+
+@pytest.fixture(scope="module")
+def lut():
+    return vp.load_duty_lut(vp.BUNDLED / "duty_roi.json")
+
+
+@pytest.fixture
+def out(tmp_path, monkeypatch):
+    """build / plane_check / preview write here, never into the repo's vol2/out."""
+    monkeypatch.setattr(sf, "OUT", tmp_path / "subframe")
+    return tmp_path / "subframe"
+
+
+# ---------------------------------------------------------------- slot spread and duty thresholds
+def test_every_slot_has_its_own_threshold():
+    assert sf.SUB == 24 and sf.SUB_HZ == 1440
+    assert sorted(np.argsort(sf._ORDER).tolist()) == list(range(24))      # each slot ranked exactly once
+    assert np.allclose(np.sort(sf._THR), (np.arange(24) + 0.5) / 24)
+
+
+def test_slot_spread_is_the_bit_reversed_interleave():
+    assert np.argsort(sf._THR).tolist() == ORDER
+    for n in (2, 4, 8):                                                   # first 2^m lit slots evenly spaced
+        assert set(np.diff(sorted(ORDER[:n]))) == {24 // n}, n
+    for n in range(25):                                                   # any duty: halves, quarters and
+        lit = np.zeros(24, int)                                           # eighths of the frame differ by at
+        lit[ORDER[:n]] = 1                                                # most one lit slot
+        for blocks in (2, 4, 8):
+            c = lit.reshape(blocks, -1).sum(1)
+            assert c.max() - c.min() <= 1, (n, blocks, c)
+
+
+def test_duty_lights_round_24d_slots_and_an_exact_half_rounds_down():
+    """Slot k is on while d > (rank_k + 0.5) / 24: d lights round(24 d) slots, the first ones of ORDER."""
+    assert len(lit_slots(0.0)) == 0 and len(lit_slots(1.0)) == 24
+    for j in range(25):
+        assert set(lit_slots(j / 24).tolist()) == set(ORDER[:j]), j
+        if j < 24:
+            assert len(lit_slots((j + 0.5) / 24)) == j                    # down (Python's round() goes to even)
+    d = np.random.default_rng(0).random(2000)
+    d = d[np.abs(24 * d % 1 - 0.5) > 1e-9]
+    assert all(len(lit_slots(x)) == round(24 * x) for x in d)
+    prev = set()
+    for x in np.linspace(-0.1, 1.1, 1201):                                # monotone and nested: a higher duty
+        s = set(lit_slots(x).tolist())                                    # only ever adds slots
+        assert prev <= s, x
+        prev = s
+    assert len(prev) == 24
+
+
+# ---------------------------------------------------------------- the 1-bit rasteriser
+def test_raster_binary_blocks_threshold_and_edges():
+    f = sf.raster_binary([([(400, 600)], 1.0, 0.0)], 0.5)
+    assert f.shape == (H, W) and f.dtype == np.uint8 and set(np.unique(f).tolist()) == {0, 255}
+    ys, xs = np.nonzero(f)
+    assert (xs.min(), xs.max(), ys.min(), ys.max(), len(xs)) == (399, 401, 598, 602, 15)   # 3 cols x 5 rows
+    assert np.count_nonzero(sf.raster_binary([([(400, 600)], 1.0, 0.0)], 0.5, wc=1, wr=1)) == 1
+    assert not sf.raster_binary([([(400, 600)], 0.5, 0.0)], 0.5).any()                    # strictly above
+    assert sf.raster_binary([([(400, 600)], 0.5 + 1e-9, 0.0)], 0.5).any()
+    assert not sf.raster_binary([], 0.0).any()
+    two = sf.raster_binary([([(400, 600), (401, 600)], 1.0, 0.0), ([(100, 200)], 0.2, 0.0)], 0.1)
+    assert np.count_nonzero(two) == 4 * 5 + 15                                            # union of blocks
+    assert np.count_nonzero(sf.raster_binary([([(0, 0)], 1.0, 0.0)], 0.5)) == 2 * 3        # clipped at the
+    assert np.count_nonzero(sf.raster_binary([([(W - 1, H - 1)], 1.0, 0.0)], 0.5)) == 2 * 3   # DMD corners
+
+
+def test_raster_binary_clips_mirrors_off_the_dmd():
+    """A block wholly off the DMD lights nothing; a negative slice end must not wrap to the far edge."""
+    for c, r in ((400, -4), (400, -10), (-3, 600), (-50, -50), (W + 1, 600), (400, H + 2)):
+        assert not sf.raster_binary([([(c, r)], 1.0, 0.0)], 0.5).any(), (c, r)
+    assert np.count_nonzero(sf.raster_binary([([(400, -2)], 1.0, 0.0)], 0.5)) == 3       # one row on the DMD
+    assert np.count_nonzero(sf.raster_binary([([(-1, 600)], 1.0, 0.0)], 0.5)) == 5       # one column
+
+
+def test_raster_binary_lights_what_the_60hz_rasteriser_lights(vol, lut):
+    for scene, t in (("ribbon", 0.3), ("sphere_round", 0.0), ("fw_ribbon", 0.7)):
+        els = vp.scene_fn(vol, scene)(t)
+        f60 = vol.frame(els, lut)[0][..., 0]
+        assert np.array_equal(sf.raster_binary(els, 0.0) > 0, f60 > 0), scene
+
+
+# ---------------------------------------------------------------- sub-frames of one HDMI frame
+def test_slot_k_samples_the_scene_at_i_over_60_plus_k_over_1440():
+    seen = []
+    subs = sf.subframes(SimpleNamespace(L=30.0), lambda t: seen.append(t) or [], 3)
+    assert np.allclose(seen, 3 / 60 + np.arange(24) / 1440)
+    assert len(subs) == 24 and not any(s.any() for s in subs)
+
+
+def test_subframes_light_each_element_in_its_duty_share():
+    v = SimpleNamespace(L=30.0)
+    els = [([(100, 100)], 1.0, 0.0), ([(300, 300)], 0.5, 0.0), ([(500, 500)], 0.25, 0.0), ([(700, 700)], 0.04, 0.0)]
+    subs = sf.subframes(v, lambda t: els, 0)
+
+    def on(c, r):
+        return [k for k, s in enumerate(subs) if s[r, c]]
+    assert on(100, 100) == list(range(24)) and on(300, 300) == sorted(ORDER[:12])
+    assert on(500, 500) == sorted(ORDER[:6]) and on(700, 700) == [0]
+    # absorption compensation: duty x exp(tau / L), renormalised so the brightest element is 1
+    subs = sf.subframes(v, lambda t: [([(100, 100)], 1.0, 0.0), ([(300, 300)], 1.0, 30.0 * np.log(2))], 0)
+    assert on(100, 100) == sorted(ORDER[:12]) and on(300, 300) == list(range(24))
+
+
+def test_a_sub_frame_whose_duties_are_all_zero_stays_dark():
+    """A fade to zero must not renormalise 0 / 0 = NaN, which `d <= threshold` would let through as fully on."""
+    v = SimpleNamespace(L=30.0)
+    with np.errstate(all="ignore"):
+        subs = sf.subframes(v, lambda t: [([(100, 100)], 0.0, 0.0), ([(300, 300)], 0.0, 5.0)], 0)
+    assert not any(s.any() for s in subs)
+    with np.errstate(all="raise"):                                        # and no 0 / 0 on the way
+        sf.subframes(v, lambda t: [([(100, 100)], 0.0, 0.0)], 0)
+    subs = sf.subframes(v, lambda t: [([(100, 100)], 0.0, 0.0), ([(300, 300)], 0.5, 0.0)], 0)
+    assert not any(s[100, 100] for s in subs) and all(s[300, 300] for s in subs)
+    assert not sf.raster_binary([([(100, 100)], float("nan"), 0.0)], 0.5).any()
+
+
+# ---------------------------------------------------------------- files: build() and plane_check()
+def test_build_writes_frames_info_and_procedure(out, vol):
+    d = sf.build("ribbon", seconds=2 / 60)
+    assert d == out / "ribbon_ab"
+    files = sorted((d / "frames").glob("*.png"))
+    assert [p.name for p in files] == ["f0000.png", "f0001.png"]
+    info = json.loads((d / "info.json").read_text())
+    assert info.pop("render_s") >= 0
+    assert info == {"scene": "ribbon", "mode": "ab", "hdmi_frames": 2, "subframes": 48, "subframe_hz": 1440.0,
+                    "subframe_us": 694.4}
+    fn = vp.scene_fn(vol, "ribbon")
+    for i, p in enumerate(files):
+        img = cv2.imread(str(p), cv2.IMREAD_UNCHANGED)
+        assert img.shape == (H, W, 3) and img.dtype == np.uint8
+        planes = flashpack.unpack(img, 24)
+        for k, pl in enumerate(planes):            # bit k = slot k = the scene at i/60 + k/1440 (ribbon: duty 1)
+            assert np.array_equal(pl, sf.raster_binary(fn((i * 24 + k) / 1440), 0.0)), (i, k)
+        assert not np.array_equal(planes[0], planes[23])                   # the ribbon moves within a frame
+    txt = (d / "procedure.txt").read_text(encoding="utf-8")
+    exp = int(1e6 / sf.SUB_HZ) - 4                                         # inside the 694 us slot
+    assert "sent nothing to the projector" in txt and f"= {exp} us" in txt and 24 * exp <= 1e6 / 60
+    assert "Joey" in txt and "Back to Video Mode" in txt
+
+
+def test_a_shorter_rebuild_leaves_no_stale_frames(out):
+    """`subframe play` loops every frames/f*.png: frames left from a longer build would play as part of the loop."""
+    sf.build("wave_A", seconds=3 / 60)
+    d = sf.build("wave_A", seconds=1 / 60)
+    assert [p.name for p in sorted((d / "frames").glob("f*.png"))] == ["f0000.png"]
+    assert json.loads((d / "info.json").read_text())["hdmi_frames"] == 1
+
+
+def test_plane_check_puts_digit_k_in_slot_k(out):
+    d = sf.plane_check()
+    assert d == out / "plane_check"
+    img = cv2.imread(str(d / "plane_check.png"), cv2.IMREAD_UNCHANGED)
+    assert img.shape == (H, W, 3) and img.dtype == np.uint8
+    assert np.array_equal(img, cv2.imread(str(d / "frames" / "f0000.png"), cv2.IMREAD_UNCHANGED))
+    b, g, r = (img[..., i] for i in range(3))
+    digits = [flashpack.digit_frame(k) > 0 for k in range(24)]
+    for k in range(24):                            # read from the bytes, not via unpack: G0-G7, R0-R7, B0-B7
+        byte, bit = (g, k) if k < 8 else (r, k - 8) if k < 16 else (b, k - 16)
+        assert np.array_equal((byte >> bit) & 1 == 1, digits[k]), k
+    assert all(not np.array_equal(digits[k], digits[j]) for k in range(24) for j in range(k))   # swaps show
+
+
+# ---------------------------------------------------------------- offline preview: 1440 Hz eye vs 60 Hz video
+def test_preview_of_a_full_duty_static_scene_matches_60hz_and_writes_a_png(out):
+    r = sf.preview("plane_flat")
+    assert (r["mean_abs_diff"], r["max_abs_diff"], r["glow_ratio_1440_over_60"]) == (0.0, 0.0, 1.0)
+    assert r["lit_px"] > 0 and r["tag"] == "[PROVED, simulation]"
+    img = cv2.imread(str(out / "preview" / "plane_flat_ab_f0000.png"), cv2.IMREAD_UNCHANGED)
+    assert img is not None and img.ndim == 2 and img.shape[1] > img.shape[0]
+
+
+def test_preview_of_a_graded_static_scene_differs_by_slot_rounding_only(out):
+    """Static: every slot sees the same duty, so 1440 Hz is off by at most half a slot (1/48) plus the 60 Hz
+    side's 8-bit level rounding through the duty curve (< 0.004)."""
+    r = sf.preview("sphere_round", save=False)
+    assert 0 < r["max_abs_diff"] <= 1 / 48 + 0.004 and abs(r["glow_ratio_1440_over_60"] - 1) < 0.01
+    assert not (out / "preview").exists()
+
+
+def test_preview_of_a_moving_scene_shows_the_smear_but_keeps_the_light(out):
+    r = sf.preview("plane_sweep", frame=240, save=False)          # wraps to frame 0 of the 4 s loop: fastest
+    assert r["frame"] == 0 and r["max_abs_diff"] > 0.5 and abs(r["glow_ratio_1440_over_60"] - 1) < 0.01
+
+
+def test_preview_compares_both_sides_from_the_same_instant(out, vol, lut):
+    """Frame i: the 1440 Hz side is slots k = 0..23 at i/60 + k/1440, the 60 Hz side the frame at i/60. The static
+    scenes above cannot see a time shift, so recompute a moving scene's numbers here; the neighbouring 60 Hz
+    frames give other numbers, so a preview one frame off on either side fails."""
+    fn = vp.scene_fn(vol, "plane_sweep")
+    for i in (0, 30):                                             # fastest, and part way to the turn
+        eye = np.mean(sf.subframes(vol, fn, i), axis=0) / 255.0
+
+        def stats(j):                                             # against the 60 Hz frame at t = j/60
+            g60 = np.interp(vol.frame(fn(j / 60), lut)[0][..., 0].astype(float), lut[0], lut[1])
+            d, lit = eye - g60, (eye > 0) | (g60 > 0)
+            return (round(float(np.abs(d[lit]).mean()), 4), round(float(np.abs(d).max()), 4),
+                    round(float(eye.sum() / g60.sum()), 4))
+        r = sf.preview("plane_sweep", frame=i, save=False)
+        got = (r["mean_abs_diff"], r["max_abs_diff"], r["glow_ratio_1440_over_60"])
+        assert r["frame"] == i and got == stats(i), (i, got, stats(i))
+        assert got != stats(i - 1) and got != stats(i + 1), i

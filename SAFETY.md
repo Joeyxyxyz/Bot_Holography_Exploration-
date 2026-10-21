@@ -22,7 +22,7 @@ This code drives a real projector and camera on a bench with a liquid-filled cas
 | **Leave the bench dark and free on every exit.** | `Bench.close()` runs these steps in order: show black for at least two HDMI frames, close the window, close the camera, release the lock. They are nested `finally` blocks, so each step runs even if an earlier one fails, on errors, on Ctrl+C and after a failed camera open. Calling it twice is safe. | `test_rig_safety.py` |
 | **No hardware from tests, CI or cloud sessions.** | `DLP_NO_HARDWARE=1` makes `Bench`, `HDMIWindow` and `Camera` refuse before touching the lock. The tests and CI set it. Tests that switch it off replace every device with a fake. | `test_rig_safety.py` |
 
-**Tools that only write files.** `vol2/flashpack.py` and `vol2.subframe build` / `planecheck` write images and a step list (`procedure.txt`), and send nothing to the projector. `vol2.subframe play`, `vol2.volplay` (without `--dry`), `holo/holo_show.py` and the capture scripts do project. They go through `rig.bench` like everything else.
+**Tools that only write files.** `vol2/flashpack.py` and `vol2.subframe build` / `planecheck` write images and a step list (`procedure.txt`), and `vol2.subframe preview` writes a comparison image; they send nothing to the projector. `vol2.subframe play`, `vol2.volplay` (without `--dry`), `holo/holo_show.py` and the capture scripts do project. They go through `rig.bench` like everything else.
 
 The static checks are a tripwire for ordinary code, not a sandbox: deliberately obfuscated code could get past them. That is why changes to `rig/` and to these tests need review (below).
 

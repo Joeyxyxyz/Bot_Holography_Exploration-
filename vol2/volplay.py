@@ -158,10 +158,12 @@ class Volume:
         """Rasterise elements into a blue-only BGR frame. Overlapping blocks take the max duty."""
         dmap = np.zeros((H, W), np.float32)
         comp = [d * np.exp(t / self.L) for _, d, t in elements]
-        norm = max(comp) if comp else 1.0
+        norm = max(comp) if comp and max(comp) > 0 else 1.0     # all dark: no 0 / 0
         for (mirrors, _, _), dc in zip(elements, comp):
             dd = dc / norm
             for c, r in mirrors:
+                if r + wr // 2 < 0 or c + wc // 2 < 0:   # wholly off the DMD: a negative slice end would wrap
+                    continue
                 sl = (slice(max(0, r - wr // 2), min(H, r + wr // 2 + 1)), slice(max(0, c - wc // 2), min(W, c + wc // 2 + 1)))
                 dmap[sl] = np.maximum(dmap[sl], dd)
         f = np.zeros((H, W, 3), np.uint8)
