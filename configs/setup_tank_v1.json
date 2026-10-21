@@ -1,0 +1,30 @@
+{
+    "name":  "tank_v1",
+    "date":  "2026-09-29",
+    "source":  "Joey, tape measure (approximate)",
+    "tank_mm":  {
+                    "acrylic_bottom":  63.10,
+                    "acrylic_top":  60.10,
+                    "acrylic_height":  72.95,
+                    "base_w":  65.60,
+                    "base_h":  22.35,
+                    "total_h":  95.30,
+                    "rounded_vertical_edges":  true
+                },
+    "projector_to_object_mm":  406,
+    "projector_to_wall_mm":  559,
+    "camera_to_object_mm":  406,
+    "camera_to_wall_mm":  559,
+    "camera":  {
+                   "side":  "left of projector",
+                   "tilt_deg":  25,
+                   "lens":  "zoomed onto tank (not bench_9in_v1)"
+               },
+    "projector":  {
+                      "side":  "right of camera",
+                      "tilt_deg":  35
+                  },
+    "assumed":  "Converging yaw: DLP turned left 35 deg off wall-normal (125 deg to wall line), camera turned right 25 deg (115 deg), both aimed at tank; ~60 deg between axes. DLP less centred on tank than camera. Confirm by calibration.",
+    "fill":  "TBD (water or glycerin, scattering agent TBD)",
+    "wall_behind_object_mm":  180
+}

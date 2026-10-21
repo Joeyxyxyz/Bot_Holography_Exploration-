@@ -1,0 +1,10 @@
+{
+ "scene": "fwc_split",
+ "mode": "ab",
+ "fps": 60.0,
+ "frames_per_cycle": 180,
+ "render_s": 7.8,
+ "L_mm": 30.0,
+ "duty_lut": "runs/20261005T092247_duty/duty_roi.json",
+ "max_blue_level": 255
+}

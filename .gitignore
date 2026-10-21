@@ -1,0 +1,18 @@
+# bench captures and rendered output (large, machine-specific)
+runs/
+vol2/out/
+holo/out/
+
+# stop files for a running player
+STOP
+STOPALL
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/

@@ -1,0 +1,322 @@
+{
+ "T2": [
+  {
+   "f_c": 0.0625,
+   "fill": 0.05,
+   "gs_iters": 0,
+   "corr": 0.8145,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.0625,
+   "fill": 0.05,
+   "gs_iters": 10,
+   "corr": 0.8057,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.0625,
+   "fill": 0.05,
+   "gs_iters": 40,
+   "corr": 0.8173,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.0625,
+   "fill": 0.125,
+   "gs_iters": 0,
+   "corr": 0.0102,
+   "fill_le_1.33fc": false
+  },
+  {
+   "f_c": 0.0625,
+   "fill": 0.125,
+   "gs_iters": 10,
+   "corr": -0.0003,
+   "fill_le_1.33fc": false
+  },
+  {
+   "f_c": 0.0625,
+   "fill": 0.125,
+   "gs_iters": 40,
+   "corr": -0.0002,
+   "fill_le_1.33fc": false
+  },
+  {
+   "f_c": 0.0625,
+   "fill": 0.25,
+   "gs_iters": 0,
+   "corr": 0.0038,
+   "fill_le_1.33fc": false
+  },
+  {
+   "f_c": 0.0625,
+   "fill": 0.25,
+   "gs_iters": 10,
+   "corr": -0.0006,
+   "fill_le_1.33fc": false
+  },
+  {
+   "f_c": 0.0625,
+   "fill": 0.25,
+   "gs_iters": 40,
+   "corr": -0.0005,
+   "fill_le_1.33fc": false
+  },
+  {
+   "f_c": 0.125,
+   "fill": 0.05,
+   "gs_iters": 0,
+   "corr": 0.8142,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.125,
+   "fill": 0.05,
+   "gs_iters": 10,
+   "corr": 0.8051,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.125,
+   "fill": 0.05,
+   "gs_iters": 40,
+   "corr": 0.8161,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.125,
+   "fill": 0.125,
+   "gs_iters": 0,
+   "corr": 0.9392,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.125,
+   "fill": 0.125,
+   "gs_iters": 10,
+   "corr": 0.9763,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.125,
+   "fill": 0.125,
+   "gs_iters": 40,
+   "corr": 0.9766,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.125,
+   "fill": 0.25,
+   "gs_iters": 0,
+   "corr": 0.0047,
+   "fill_le_1.33fc": false
+  },
+  {
+   "f_c": 0.125,
+   "fill": 0.25,
+   "gs_iters": 10,
+   "corr": -0.0004,
+   "fill_le_1.33fc": false
+  },
+  {
+   "f_c": 0.125,
+   "fill": 0.25,
+   "gs_iters": 40,
+   "corr": -0.0003,
+   "fill_le_1.33fc": false
+  },
+  {
+   "f_c": 0.25,
+   "fill": 0.05,
+   "gs_iters": 0,
+   "corr": 0.7492,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.25,
+   "fill": 0.05,
+   "gs_iters": 10,
+   "corr": 0.7931,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.25,
+   "fill": 0.05,
+   "gs_iters": 40,
+   "corr": 0.8045,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.25,
+   "fill": 0.125,
+   "gs_iters": 0,
+   "corr": 0.8666,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.25,
+   "fill": 0.125,
+   "gs_iters": 10,
+   "corr": 0.9616,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.25,
+   "fill": 0.125,
+   "gs_iters": 40,
+   "corr": 0.9598,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.25,
+   "fill": 0.25,
+   "gs_iters": 0,
+   "corr": 0.7381,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.25,
+   "fill": 0.25,
+   "gs_iters": 10,
+   "corr": 0.9526,
+   "fill_le_1.33fc": true
+  },
+  {
+   "f_c": 0.25,
+   "fill": 0.25,
+   "gs_iters": 40,
+   "corr": 0.952,
+   "fill_le_1.33fc": true
+  }
+ ],
+ "T3": {
+  "assumptions": {
+   "led_optical_W": 0.3,
+   "led_die_mm2": 1.0,
+   "led_fwhm_nm": 30.0,
+   "collimator_f_mm": 100.0,
+   "optics_transmission": 0.8,
+   "dmd_area_mm2": 60.676,
+   "dmd_window_fill_reflect": 0.85,
+   "eff_window_from_sim": 0.0446,
+   "wireframe_length_mm": 72.0,
+   "white_card_reflectance": 0.9,
+   "V_532": 0.88,
+   "dark_visible_cd_m2": 0.01,
+   "comfortable_cd_m2": 1.0
+  },
+  "rows": [
+   {
+    "case": "led_pin75_nofilter",
+    "P_at_dmd_uW": 2.05,
+    "P_in_image_nW": 77.6,
+    "line_width_mm": 0.3,
+    "card_luminance_cd_m2": 0.619,
+    "visible_dark_room": true,
+    "comfortable": false
+   },
+   {
+    "case": "led_pin75_10nm",
+    "P_at_dmd_uW": 0.68,
+    "P_in_image_nW": 25.9,
+    "line_width_mm": 0.3,
+    "card_luminance_cd_m2": 0.206,
+    "visible_dark_room": true,
+    "comfortable": false
+   },
+   {
+    "case": "led_pin200_nofilter",
+    "P_at_dmd_uW": 14.56,
+    "P_in_image_nW": 552.1,
+    "line_width_mm": 0.8,
+    "card_luminance_cd_m2": 1.65,
+    "visible_dark_room": true,
+    "comfortable": true
+   },
+   {
+    "case": "led_pin200_10nm",
+    "P_at_dmd_uW": 4.85,
+    "P_in_image_nW": 184.0,
+    "line_width_mm": 0.8,
+    "card_luminance_cd_m2": 0.55,
+    "visible_dark_room": true,
+    "comfortable": false
+   },
+   {
+    "case": "laser_5mW",
+    "P_at_dmd_uW": 4000.0,
+    "P_in_image_nW": 151640.0,
+    "line_width_mm": 0.06,
+    "card_luminance_cd_m2": 6044.022,
+    "visible_dark_room": true,
+    "comfortable": true
+   }
+  ],
+  "note": "Card luminance = image focused on a white card. In a scattering fill only the scattered fraction reaches the eye: expect 10-100x dimmer. [HEURISTIC]"
+ },
+ "T4": {
+  "rect": {
+   "nearest_orders_xy_mm": [
+    [
+     -24.6,
+     0.0
+    ],
+    [
+     24.6,
+     0.0
+    ],
+    [
+     -49.3,
+     0.0
+    ],
+    [
+     0.0,
+     -49.3
+    ],
+    [
+     0.0,
+     49.3
+    ],
+    [
+     49.3,
+     0.0
+    ]
+   ],
+   "z_m": 0.5,
+   "lambda_m": 5.32e-07
+  },
+  "diamond": {
+   "nearest_orders_xy_mm": [
+    [
+     -24.6,
+     -24.6
+    ],
+    [
+     -24.6,
+     24.6
+    ],
+    [
+     24.6,
+     -24.6
+    ],
+    [
+     24.6,
+     24.6
+    ],
+    [
+     -49.3,
+     0.0
+    ],
+    [
+     0.0,
+     -49.3
+    ]
+   ],
+   "z_m": 0.5,
+   "lambda_m": 5.32e-07
+  },
+  "discriminator": "All mirrors ON, coherent (laser or pinhole-filtered LED) collimated beam on the bare DMD, screen at 0.50 m around the ON-state specular spot. rect: first orders ON THE HORIZONTAL AXIS at +/-24.6 mm. diamond: first orders on the 45-deg DIAGONALS at (+/-24.6, +/-24.6) mm and nothing on the horizontal axis until +/-49.3 mm. [PROVED] for these lattice models."
+ },
+ "runtime_s": 146.9
+}

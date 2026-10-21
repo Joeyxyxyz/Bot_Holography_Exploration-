@@ -1,0 +1,212 @@
+[
+ {
+  "psi": -10,
+  "gap_mm": 8.0,
+  "joint_area_mm2": 522,
+  "inscribed_half_mm": 4.5,
+  "A_cols": [
+   540,
+   625
+  ],
+  "B_cols": [
+   654,
+   718
+  ]
+ },
+ {
+  "psi": -10,
+  "gap_mm": 5.0,
+  "joint_area_mm2": 789,
+  "inscribed_half_mm": 6.0,
+  "A_cols": [
+   540,
+   631
+  ],
+  "B_cols": [
+   650,
+   718
+  ]
+ },
+ {
+  "psi": -10,
+  "gap_mm": 3.5,
+  "joint_area_mm2": 979,
+  "inscribed_half_mm": 6.5,
+  "A_cols": [
+   540,
+   634
+  ],
+  "B_cols": [
+   647,
+   718
+  ]
+ },
+ {
+  "psi": -5,
+  "gap_mm": 8.0,
+  "joint_area_mm2": 542,
+  "inscribed_half_mm": 5.5,
+  "A_cols": [
+   540,
+   626
+  ],
+  "B_cols": [
+   655,
+   728
+  ]
+ },
+ {
+  "psi": -5,
+  "gap_mm": 5.0,
+  "joint_area_mm2": 837,
+  "inscribed_half_mm": 6.0,
+  "A_cols": [
+   540,
+   632
+  ],
+  "B_cols": [
+   650,
+   728
+  ]
+ },
+ {
+  "psi": -5,
+  "gap_mm": 3.5,
+  "joint_area_mm2": 988,
+  "inscribed_half_mm": 6.5,
+  "A_cols": [
+   540,
+   635
+  ],
+  "B_cols": [
+   648,
+   728
+  ]
+ },
+ {
+  "psi": 0,
+  "gap_mm": 8.0,
+  "joint_area_mm2": 572,
+  "inscribed_half_mm": 5.5,
+  "A_cols": [
+   547,
+   628
+  ],
+  "B_cols": [
+   656,
+   737
+  ]
+ },
+ {
+  "psi": 0,
+  "gap_mm": 5.0,
+  "joint_area_mm2": 842,
+  "inscribed_half_mm": 6.5,
+  "A_cols": [
+   547,
+   633
+  ],
+  "B_cols": [
+   651,
+   737
+  ]
+ },
+ {
+  "psi": 0,
+  "gap_mm": 3.5,
+  "joint_area_mm2": 961,
+  "inscribed_half_mm": 7.0,
+  "A_cols": [
+   547,
+   635
+  ],
+  "B_cols": [
+   649,
+   737
+  ]
+ },
+ {
+  "psi": 5,
+  "gap_mm": 8.0,
+  "joint_area_mm2": 542,
+  "inscribed_half_mm": 5.5,
+  "A_cols": [
+   556,
+   629
+  ],
+  "B_cols": [
+   658,
+   744
+  ]
+ },
+ {
+  "psi": 5,
+  "gap_mm": 5.0,
+  "joint_area_mm2": 837,
+  "inscribed_half_mm": 6.0,
+  "A_cols": [
+   556,
+   634
+  ],
+  "B_cols": [
+   652,
+   744
+  ]
+ },
+ {
+  "psi": 5,
+  "gap_mm": 3.5,
+  "joint_area_mm2": 988,
+  "inscribed_half_mm": 6.5,
+  "A_cols": [
+   556,
+   636
+  ],
+  "B_cols": [
+   649,
+   744
+  ]
+ },
+ {
+  "psi": 10,
+  "gap_mm": 8.0,
+  "joint_area_mm2": 522,
+  "inscribed_half_mm": 4.5,
+  "A_cols": [
+   566,
+   630
+  ],
+  "B_cols": [
+   659,
+   744
+  ]
+ },
+ {
+  "psi": 10,
+  "gap_mm": 5.0,
+  "joint_area_mm2": 789,
+  "inscribed_half_mm": 6.0,
+  "A_cols": [
+   566,
+   634
+  ],
+  "B_cols": [
+   653,
+   744
+  ]
+ },
+ {
+  "psi": 10,
+  "gap_mm": 3.5,
+  "joint_area_mm2": 979,
+  "inscribed_half_mm": 6.5,
+  "A_cols": [
+   566,
+   637
+  ],
+  "B_cols": [
+   650,
+   744
+  ]
+ }
+]

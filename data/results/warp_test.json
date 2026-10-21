@@ -1,0 +1,25 @@
+{
+ "warp_run": "runs\\20261005T100830_warp_scan",
+ "design_row": 972,
+ "target_camera_y": 628.6093287328956,
+ "cols": [
+  610,
+  750
+ ],
+ "row_range_corrected": [
+  974.7640572679725,
+  987.4415794821357
+ ],
+ "flat": {
+  "slope": 0.0263,
+  "rms_px": 3.01,
+  "p95_px": 5.39,
+  "n": 247
+ },
+ "corrected": {
+  "slope": 0.0028,
+  "rms_px": 1.18,
+  "p95_px": 2.89,
+  "n": 248
+ }
+}

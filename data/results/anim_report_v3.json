@@ -1,0 +1,65 @@
+{
+ "joint_box_side_mm": 16.38813559322034,
+ "size_max_mm": 13.110508474576273,
+ "orbit_mm": 2.9498644067796613,
+ "layer_y_mm": [
+  -19.0,
+  -15.75,
+  -12.5,
+  -9.25,
+  -6.0,
+  -2.75,
+  0.5,
+  3.75,
+  7.0,
+  10.25,
+  13.5,
+  16.75,
+  20.0
+ ],
+ "layer_spacing_mm": 3.25,
+ "stills": {
+  "sphere": {
+   "layers": 11,
+   "on_fraction": 0.0006348107109879963
+  },
+  "hourglass": {
+   "layers": 13,
+   "on_fraction": 0.0007502308402585411
+  },
+  "cage": {
+   "layers": 13,
+   "on_fraction": 0.0007502308402585411
+  },
+  "pyramid": {
+   "layers": 12,
+   "on_fraction": 0.0006780932594644506
+  },
+  "cone_down": {
+   "layers": 12,
+   "on_fraction": 0.0006780932594644506
+  }
+ },
+ "anims": {
+  "breathing_diamond": {
+   "frames": 16,
+   "dir": "vol2/out/anim_glycerin_v3/breathing_diamond"
+  },
+  "rising_wave": {
+   "frames": 16,
+   "dir": "vol2/out/anim_glycerin_v3/rising_wave"
+  },
+  "twisting_tower": {
+   "frames": 16,
+   "dir": "vol2/out/anim_glycerin_v3/twisting_tower"
+  },
+  "morph": {
+   "frames": 16,
+   "dir": "vol2/out/anim_glycerin_v3/morph"
+  },
+  "bounce": {
+   "frames": 16,
+   "dir": "vol2/out/anim_glycerin_v3/bounce"
+  }
+ }
+}

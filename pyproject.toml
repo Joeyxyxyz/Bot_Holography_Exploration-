@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bot-holography-exploration"
+version = "0.1.0"
+description = "Volumetric projection into a fluorescent case with a stock DLP LightCrafter 4500: ray model, scene player, calibration, and a safety-first bench layer."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+# Pick ONE per environment: both provide the cv2 package and must not be installed together.
+# Offline work (models, rendering, simulation, tests, CI, cloud sessions): headless OpenCV, no display windows.
+dev = ["opencv-python-headless>=4.8", "pytest>=7", "pillow>=10"]
+# The bench (Windows): GUI OpenCV for the DMD window. PySpin is NOT on PyPI: install it from the FLIR Spinnaker SDK.
+bench = ["opencv-python>=4.8", "pytest>=7", "pillow>=10"]
+
+[tool.setuptools]
+packages = ["rig", "vol2"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"

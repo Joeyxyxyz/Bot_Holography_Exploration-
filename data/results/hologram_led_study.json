@@ -1,0 +1,174 @@
+{
+ "die_mm": 1.0,
+ "f_col_mm": 100.0,
+ "configs": {
+  "laser_532": {
+   "corr": [
+    [
+     0.265,
+     0.086,
+     0.02
+    ],
+    [
+     0.106,
+     0.476,
+     0.086
+    ],
+    [
+     0.053,
+     0.079,
+     0.19
+    ]
+   ],
+   "diag_mean": 0.31,
+   "offdiag_mean": 0.072,
+   "source_half_angle_mrad": 0.0,
+   "blur_radius_mm_at_zmid": 0.0,
+   "throughput_vs_bare_led": null
+  },
+  "led_30nm_pin75um": {
+   "corr": [
+    [
+     0.188,
+     0.123,
+     0.044
+    ],
+    [
+     0.167,
+     0.202,
+     0.114
+    ],
+    [
+     0.109,
+     0.118,
+     0.117
+    ]
+   ],
+   "diag_mean": 0.169,
+   "offdiag_mean": 0.112,
+   "source_half_angle_mrad": 0.375,
+   "blur_radius_mm_at_zmid": 0.15,
+   "throughput_vs_bare_led": 0.00562
+  },
+  "led_10nm_pin75um": {
+   "corr": [
+    [
+     0.187,
+     0.101,
+     0.034
+    ],
+    [
+     0.163,
+     0.231,
+     0.123
+    ],
+    [
+     0.094,
+     0.092,
+     0.106
+    ]
+   ],
+   "diag_mean": 0.175,
+   "offdiag_mean": 0.101,
+   "source_half_angle_mrad": 0.375,
+   "blur_radius_mm_at_zmid": 0.15,
+   "throughput_vs_bare_led": 0.00187
+  },
+  "led_3nm_pin75um": {
+   "corr": [
+    [
+     0.186,
+     0.096,
+     0.032
+    ],
+    [
+     0.161,
+     0.233,
+     0.123
+    ],
+    [
+     0.091,
+     0.086,
+     0.104
+    ]
+   ],
+   "diag_mean": 0.174,
+   "offdiag_mean": 0.098,
+   "source_half_angle_mrad": 0.375,
+   "blur_radius_mm_at_zmid": 0.15,
+   "throughput_vs_bare_led": 0.00056
+  },
+  "led_10nm_pin200um": {
+   "corr": [
+    [
+     0.16,
+     0.084,
+     0.045
+    ],
+    [
+     0.202,
+     0.12,
+     0.124
+    ],
+    [
+     0.134,
+     0.08,
+     0.081
+    ]
+   ],
+   "diag_mean": 0.12,
+   "offdiag_mean": 0.111,
+   "source_half_angle_mrad": 1.0,
+   "blur_radius_mm_at_zmid": 0.4,
+   "throughput_vs_bare_led": 0.01333
+  },
+  "led_10nm_pin500um": {
+   "corr": [
+    [
+     0.143,
+     0.046,
+     0.026
+    ],
+    [
+     0.137,
+     0.049,
+     0.047
+    ],
+    [
+     0.125,
+     0.044,
+     0.056
+    ]
+   ],
+   "diag_mean": 0.083,
+   "offdiag_mean": 0.071,
+   "source_half_angle_mrad": 2.5,
+   "blur_radius_mm_at_zmid": 1.0,
+   "throughput_vs_bare_led": 0.08333
+  },
+  "led_10nm_bare_die_1mm": {
+   "corr": [
+    [
+     0.11,
+     0.036,
+     0.007
+    ],
+    [
+     0.106,
+     0.042,
+     0.015
+    ],
+    [
+     0.1,
+     0.043,
+     0.022
+    ]
+   ],
+   "diag_mean": 0.058,
+   "offdiag_mean": 0.051,
+   "source_half_angle_mrad": 5.0,
+   "blur_radius_mm_at_zmid": 2.0,
+   "throughput_vs_bare_led": 0.33333
+  }
+ }
+}
