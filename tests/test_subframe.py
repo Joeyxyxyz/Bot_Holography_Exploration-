@@ -207,3 +207,22 @@ def test_preview_of_a_graded_static_scene_differs_by_slot_rounding_only(out):
 def test_preview_of_a_moving_scene_shows_the_smear_but_keeps_the_light(out):
     r = sf.preview("plane_sweep", frame=240, save=False)          # wraps to frame 0 of the 4 s loop: fastest
     assert r["frame"] == 0 and r["max_abs_diff"] > 0.5 and abs(r["glow_ratio_1440_over_60"] - 1) < 0.01
+
+
+def test_preview_compares_both_sides_from_the_same_instant(out, vol, lut):
+    """Frame i: the 1440 Hz side is slots k = 0..23 at i/60 + k/1440, the 60 Hz side the frame at i/60. The static
+    scenes above cannot see a time shift, so recompute a moving scene's numbers here; the neighbouring 60 Hz
+    frames give other numbers, so a preview one frame off on either side fails."""
+    fn = vp.scene_fn(vol, "plane_sweep")
+    for i in (0, 30):                                             # fastest, and part way to the turn
+        eye = np.mean(sf.subframes(vol, fn, i), axis=0) / 255.0
+
+        def stats(j):                                             # against the 60 Hz frame at t = j/60
+            g60 = np.interp(vol.frame(fn(j / 60), lut)[0][..., 0].astype(float), lut[0], lut[1])
+            d, lit = eye - g60, (eye > 0) | (g60 > 0)
+            return (round(float(np.abs(d[lit]).mean()), 4), round(float(np.abs(d).max()), 4),
+                    round(float(eye.sum() / g60.sum()), 4))
+        r = sf.preview("plane_sweep", frame=i, save=False)
+        got = (r["mean_abs_diff"], r["max_abs_diff"], r["glow_ratio_1440_over_60"])
+        assert r["frame"] == i and got == stats(i), (i, got, stats(i))
+        assert got != stats(i - 1) and got != stats(i + 1), i
