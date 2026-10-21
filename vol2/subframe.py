@@ -106,8 +106,8 @@ def procedure(out: Path) -> str:
     return "\n".join([
         f"VIDEO-PORT PATTERN MODE (1440 sub-frames/s) for {out}",
         "FILES ONLY: writing this folder sent nothing to the projector (this code has no USB/HID at all).",
-        "Written by the DMD experiments session. Files only; every GUI step is Joey's (4500 MKII GUI, continuous-",
-        "limit build). The HDMI desktop stays connected: in this mode the 24 bit-planes of each 60 Hz HDMI frame",
+        "Written by the DMD experiments session. Every GUI step is Joey's (4500 MKII GUI, continuous-limit",
+        "build). The HDMI desktop stays connected: in this mode the 24 bit-planes of each 60 Hz HDMI frame",
         "are shown as 24 one-bit patterns. Our player keeps feeding those frames.",
         "",
         "0. Back up first if you have not: Save Solution (.ini) of today's video-mode settings.",
