@@ -32,7 +32,7 @@ import numpy as np
 
 from .flashpack import digit_frame, pack, unpack
 from .render import H, W
-from .volplay import BUNDLED, ROOT, Volume, _period, _repo_rel, load_duty_lut, play, render_clip, scene_fn
+from .volplay import BUNDLED, ROOT, Volume, _period, _repo_rel, load_duty_lut, play, scene_fn
 
 SUB = 24                                  # sub-frames per HDMI frame
 FPS = 60.0
@@ -107,7 +107,7 @@ def preview(scene, frame=0, mode="ab", L=30.0, where=(40.0, 40.0), save=True):
     same scene [PROVED, simulation]: a DMD-plane comparison of glow weights, not a picture of the case.
 
     1440 Hz: the 24 bit-planes of packed frame `frame` (pack -> unpack, as the DMD reads them), averaged, so a
-    pixel's glow = lit slots / 24. 60 Hz: volplay.render_clip of the same scene with the BUNDLED duty curve
+    pixel's glow = lit slots / 24. 60 Hz: the volplay frame i of the same scene with the BUNDLED duty curve
     (data/calibration/duty_roi.json), its blue level mapped back to relative glow through that same curve.
     Assumed for the 1-bit slots, not measured [HEURISTIC]: every lit slot adds the same glow (same blue drive and
     exposure per slot; fluorescein answers in ns [ASSERTED], far inside a 694 us slot) and the eye adds the 24
