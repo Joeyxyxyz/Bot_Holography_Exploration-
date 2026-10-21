@@ -35,7 +35,10 @@ SUB = 24                                  # sub-frames per HDMI frame
 FPS = 60.0
 SUB_HZ = SUB * FPS                        # 1440
 OUT = ROOT / "vol2" / "out" / "subframe"
-_ORDER = np.argsort([int(f"{k:05b}"[::-1], 2) for k in range(32)])[:SUB]   # spread order for duty
+# Spread keys: the 5-bit bit reversals of 0..23 (values up to 30, so NOT slot numbers). Only their ranks are
+# used: slot k gets threshold rank argsort(_ORDER)[k], so a growing duty lights slots 0, 12, 6, 18, 3, 15, ...
+_ORDER = np.argsort([int(f"{k:05b}"[::-1], 2) for k in range(32)])[:SUB]
+_THR = (np.argsort(_ORDER) + 0.5) / SUB           # slot k's duty threshold, spread over the frame
 
 
 def raster_binary(elements, duty_slot, wc=3, wr=5):
@@ -49,6 +52,19 @@ def raster_binary(elements, duty_slot, wc=3, wr=5):
     return f
 
 
+def subframes(vol, fn, i):
+    """The 24 one-bit sub-frames of HDMI frame i: slot k samples the scene at t = i/60 + k/1440."""
+    subs = []
+    for k in range(SUB):
+        els = fn((i * SUB + k) / SUB_HZ)
+        if els:                                       # absorption compensation, normalised per sub-frame
+            comp = np.array([d * np.exp(tau / vol.L) for _, d, tau in els])
+            comp = comp / comp.max()
+            els = [(m, float(c), tau) for (m, _, tau), c in zip(els, comp)]
+        subs.append(raster_binary(els, _THR[k]))
+    return subs
+
+
 def build(scene, seconds=None, mode="ab", L=30.0, where=(40.0, 40.0)):
     vol = Volume(str(ROOT / "configs" / "case_fit_tank_v4.json"), where=where, mode=mode, L=L)
     fn = scene_fn(vol, scene)
@@ -56,19 +72,9 @@ def build(scene, seconds=None, mode="ab", L=30.0, where=(40.0, 40.0)):
     n_frames = int(round(period * FPS))
     out = OUT / f"{scene}_{mode}"
     (out / "frames").mkdir(parents=True, exist_ok=True)
-    thr = (np.argsort(_ORDER) + 0.5) / SUB          # slot k's duty threshold, spread over the frame
     t0 = time.perf_counter()
     for i in range(n_frames):
-        subs = []
-        for k in range(SUB):
-            t = (i * SUB + k) / SUB_HZ
-            els = fn(t)
-            if els:                                   # absorption compensation, normalised per sub-frame
-                comp = np.array([d * np.exp(tau / vol.L) for _, d, tau in els])
-                comp = comp / comp.max()
-                els = [(m, float(c), tau) for (m, _, tau), c in zip(els, comp)]
-            subs.append(raster_binary(els, thr[k]))
-        cv2.imwrite(str(out / "frames" / f"f{i:04d}.png"), pack(subs))
+        cv2.imwrite(str(out / "frames" / f"f{i:04d}.png"), pack(subframes(vol, fn, i)))
     info = {"scene": scene, "mode": mode, "hdmi_frames": n_frames, "subframes": n_frames * SUB,
             "subframe_hz": SUB_HZ, "subframe_us": round(1e6 / SUB_HZ, 1), "render_s": round(time.perf_counter() - t0, 1)}
     (out / "info.json").write_text(json.dumps(info, indent=1))
