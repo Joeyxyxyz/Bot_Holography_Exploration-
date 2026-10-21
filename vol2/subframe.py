@@ -12,7 +12,7 @@ In a linear medium the eye sums the sub-frames: speed buys smooth motion and lin
 Writes: frames/fNNNN.png (play with: python -m vol2.subframe play <dir>), plane_check.png, procedure.txt.
 FILES ONLY until Joey switches the mode; in Video Mode these frames look like coloured noise.
 
-  python -m vol2.subframe build <scene> [--seconds 2] [--mode ab|b]
+  python -m vol2.subframe build <scene> [--seconds 2] [--mode ab|b] [--case-json <file>]
   python -m vol2.subframe play <out_dir> [--seconds 30]
   python -m vol2.subframe planecheck
 """
@@ -29,7 +29,7 @@ import numpy as np
 
 from .flashpack import digit_frame, pack
 from .render import H, W
-from .volplay import ROOT, Volume, _period, play, scene_fn
+from .volplay import CASE_JSON, ROOT, Volume, _period, play, scene_fn
 
 SUB = 24                                  # sub-frames per HDMI frame
 FPS = 60.0
@@ -49,8 +49,8 @@ def raster_binary(elements, duty_slot, wc=3, wr=5):
     return f
 
 
-def build(scene, seconds=None, mode="ab", L=30.0, where=(40.0, 40.0)):
-    vol = Volume(str(ROOT / "configs" / "case_fit_tank_v4.json"), where=where, mode=mode, L=L)
+def build(scene, seconds=None, mode="ab", L=30.0, where=(40.0, 40.0), case_json=CASE_JSON):
+    vol = Volume(str(case_json), where=where, mode=mode, L=L)   # case file: model + scene windows (volplay)
     fn = scene_fn(vol, scene)
     period = seconds or _period(scene)
     n_frames = int(round(period * FPS))
@@ -131,13 +131,14 @@ if __name__ == "__main__":
     b.add_argument("scene")
     b.add_argument("--seconds", type=float, default=None)
     b.add_argument("--mode", default="ab", choices=["ab", "b"])
+    b.add_argument("--case-json", default=str(CASE_JSON), help="case file: fitted model + scene_windows")
     p = sub.add_parser("play")
     p.add_argument("dir", type=Path)
     p.add_argument("--seconds", type=float, default=30.0)
     sub.add_parser("planecheck")
     a = ap.parse_args()
     if a.cmd == "build":
-        build(a.scene, a.seconds, a.mode)
+        build(a.scene, a.seconds, a.mode, case_json=a.case_json)
     elif a.cmd == "play":
         play_dir(a.dir, a.seconds)
     else:
