@@ -39,4 +39,4 @@ Read `README.md`, `SAFETY.md` and `docs/BRIEFING.md` before changing anything. `
 
 - Small, focused branches and PRs. `python -m pytest` must pass. Add tests for new scenes and models.
 - Keep the existing style: compact numpy, short comments that give the reason, and tags in docstrings.
-- The bundled calibration (`data/calibration/`) is one bench day (2026-10-05). It is not a general model of the case. If the case moves, the column windows in `vol2/volplay.py` and the case fit in `configs/` must be re-measured on the bench.
+- The bundled calibration (`data/calibration/`) is one bench day (2026-10-05). It is not a general model of the case. If the case moves, the case fit and its scene windows (`scene_windows` in `configs/case_fit_tank_v4.json`) must be re-measured on the bench into a new case file; the player code needs no edit. The calibration capture scripts still carry 2026-10-05 DMD ranges (BACKLOG offline 3).

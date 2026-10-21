@@ -10,9 +10,10 @@
 2. **Model the inverted case.**
    - On 2026-10-05 the case was upside down: clear acrylic floor, black base overhead.
    - Add floor reflections to `vol2/geometry.py`, then re-run the joint-region estimates.
-3. **Move hard-coded column windows into config.**
-   - The curtain, plane and `fw_*` windows in `vol2/volplay.py` are DMD columns for one case position.
-   - Derive them from `configs/` so that a moved case needs only a re-map.
+3. **Move the remaining hard-coded DMD ranges into config.**
+   - Done for the scenes: the curtain, ocean, plane and `fw_*` windows now come from `scene_windows` in the case file (`configs/case_fit_tank_v4.json`), and `volplay` / `subframe build` take `--case-json`. `tests/test_scene_config.py` holds the byte-identical golden snapshot and the moved-case tests.
+   - Still hard-coded for the 2026-10-05 position: the bench capture ranges in `vol2/calib_duty.py` (`BAND`, rows 900–1050 × cols 700–740, also used by `rate`) and `vol2/warp_scan.py` (`COLS` 560–785, `ROWS` 860–1090, `clean_map(row_max=1030)`). Read them from the case file too, so a re-map also moves the calibration. Only the bench can check their output, so keep today's numbers as the defaults.
+   - The measurement scripts (`plane_color`, `plane_geom`, `edge_quality`, `warp_test`, `oneface_edges`, `twoface_map`) and the right-side-up single- and two-face content (`oneface_content`, `twoface_content`) keep their numbers as bench records.
 4. **A content planner that knows about ghosts.**
    - Choose rod and band sets that maximise on-shape light and minimise ghost crossings, using `vol2/simulate.py` as the metric.
    - Start from the "woven box" result (8 real corners, 0 ghosts).

@@ -101,6 +101,7 @@ camera  ->   \/   (camera left of the projector, looking roughly straight throug
   | row_ref / row_base / fill_mm | 970 / 1095 / 49 | hand / row-sweep edges [HEURISTIC] |
   | r_corner | 12 mm | hand, after Joey saw corner bending |
   | planeA_cols / planeB_cols | 584–645 / 695–750 | hand, from the scans and Joey's corner observation |
+  | scene_windows: clean_A / clean_B / full_width | 588–643 / 697–748 / 560–785 | hand: the clean face windows and the full-width plane of the 2026-10-05 captures; the DMD columns the DMD-space scenes light [HEURISTIC] |
 
   - **Unknowns:** projector pitch / principal point, the diamond row-parity offset, and absorption length.
   - **Upside-down caveat.** The ray model still assumes an absorbing floor (the black base) and a free liquid surface on top. With the case inverted, the floor is clear acrylic and the black base is overhead. Floor reflections are not modelled, so reflected legs near the bottom and the joint-region estimates near the floor may be off [HEURISTIC].
@@ -246,7 +247,7 @@ camera  ->   \/   (camera left of the projector, looking roughly straight throug
 ```
 python -m vol2.volplay <scene> --dry --case-json configs/case_fit_tank_v4.json
 ```
-Note: the player reads the **latest** `runs/*_duty/duty_roi.json` and (for fwc_*) the latest `runs/*_warp_scan`; with no runs it falls back to the bundled `data/calibration/` copies. A new capture changes every scene's output. The curtain and plane column windows are hard-coded and must be edited if the case moves.
+Note: the player reads the **latest** `runs/*_duty/duty_roi.json` and (for fwc_*) the latest `runs/*_warp_scan`; with no runs it falls back to the bundled `data/calibration/` copies. A new capture changes every scene's output. The DMD columns the curtain, ocean, plane and fw_* scenes light come from the case file's `scene_windows` (with its `rows`). If the case moves, re-map and re-fit, write a new case file with re-measured windows, and pass it with `--case-json` (`volplay` and `subframe build`); no code edit.
 
 **Play at 60 Hz:**
 ```
@@ -271,7 +272,7 @@ Each run takes the rig lock. A file `STOP` ends the current scene; `STOPALL` end
   - `python -m vol2.warp_scan capture`
   - `python -m vol2.warp_test <warp_run>`
 - **1440 Hz sub-frames** (needs Joey's GUI mode switch; **not yet run**):
-  - `python -m vol2.subframe build <scene>`: each build folder gets a `procedure.txt`.
+  - `python -m vol2.subframe build <scene> [--case-json <file>]`: each build folder gets a `procedure.txt`.
   - `python -m vol2.subframe planecheck`, then `python -m vol2.subframe play vol2\out\subframe\plane_check`.
   - Do not use `tools/play_loop.py` for packed frames: it reads grayscale.
 - **Holding frames:** `python tools/play_loop.py <s/frame> <loops> <png…>` with `PLAY_COLOR=blue` holds **mono 0/255** frames only (e.g. `*_hdmi.png`). For BGR or graded frames use `volplay` or `tools/shoot_bgr.py`. `holo/holo_show.py` holds a mono frame and takes a camera snapshot.
