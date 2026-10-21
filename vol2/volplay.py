@@ -158,7 +158,7 @@ class Volume:
         """Rasterise elements into a blue-only BGR frame. Overlapping blocks take the max duty."""
         dmap = np.zeros((H, W), np.float32)
         comp = [d * np.exp(t / self.L) for _, d, t in elements]
-        norm = max(comp) if comp else 1.0
+        norm = max(comp) if comp and max(comp) > 0 else 1.0     # all dark: no 0 / 0
         for (mirrors, _, _), dc in zip(elements, comp):
             dd = dc / norm
             for c, r in mirrors:
