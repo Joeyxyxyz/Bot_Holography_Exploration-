@@ -47,7 +47,7 @@ def raster_binary(elements, duty_slot, wc=3, wr=5):
     """1-bit frame: an element is ON in this sub-frame if its duty exceeds this slot's threshold."""
     f = np.zeros((H, W), np.uint8)
     for mirrors, d, _ in elements:
-        if d <= duty_slot:
+        if not d > duty_slot:                     # not `d <= duty_slot`: a NaN duty must stay off
             continue
         for c, r in mirrors:
             f[max(0, r - wr // 2):min(H, r + wr // 2 + 1), max(0, c - wc // 2):min(W, c + wc // 2 + 1)] = 255
@@ -61,7 +61,7 @@ def subframes(vol, fn, i):
         els = fn((i * SUB + k) / SUB_HZ)
         if els:                                       # absorption compensation, normalised per sub-frame
             comp = np.array([d * np.exp(tau / vol.L) for _, d, tau in els])
-            comp = comp / comp.max()
+            comp = comp / comp.max() if comp.max() > 0 else comp     # all dark: no 0 / 0
             els = [(m, float(c), tau) for (m, _, tau), c in zip(els, comp)]
         subs.append(raster_binary(els, _THR[k]))
     return subs

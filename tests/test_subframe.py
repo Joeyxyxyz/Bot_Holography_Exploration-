@@ -120,6 +120,19 @@ def test_subframes_light_each_element_in_its_duty_share():
     assert on(100, 100) == sorted(ORDER[:12]) and on(300, 300) == list(range(24))
 
 
+def test_a_sub_frame_whose_duties_are_all_zero_stays_dark():
+    """A fade to zero must not renormalise 0 / 0 = NaN, which `d <= threshold` would let through as fully on."""
+    v = SimpleNamespace(L=30.0)
+    with np.errstate(all="ignore"):
+        subs = sf.subframes(v, lambda t: [([(100, 100)], 0.0, 0.0), ([(300, 300)], 0.0, 5.0)], 0)
+    assert not any(s.any() for s in subs)
+    with np.errstate(all="raise"):                                        # and no 0 / 0 on the way
+        sf.subframes(v, lambda t: [([(100, 100)], 0.0, 0.0)], 0)
+    subs =sf.subframes(v, lambda t: [([(100, 100)], 0.0, 0.0), ([(300, 300)], 0.5, 0.0)], 0)
+    assert not any(s[100, 100] for s in subs) and all(s[300, 300] for s in subs)
+    assert not sf.raster_binary([([(100, 100)], float("nan"), 0.0)], 0.5).any()
+
+
 # ---------------------------------------------------------------- files: build() and plane_check()
 def test_build_writes_frames_info_and_procedure(out, vol):
     d = sf.build("ribbon", seconds=2 / 60)
