@@ -20,9 +20,18 @@
    - Simulate face-A light reflected off the bare back wall: it runs at about 90° to face B.
    - Weigh rounder shapes against the extra crossings.
 6. **1440 Hz sub-frames.**
-   - The 24-plane pack / unpack round trip is already tested (`tests/test_vol2.py`).
-   - Still untested: `vol2/subframe.py`'s slot spread (`_ORDER`), the duty thresholds (round(24·d) slots lit), `raster_binary`, and `build()` output.
-   - Write a simulated preview of what the eye integrates.
+   - Tested offline (`tests/test_vol2.py`, `tests/test_subframe.py`):
+     - the 24-plane pack / unpack round trip, and the plane-check digit k in slot k;
+     - the slot spread (`_ORDER`): a growing duty lights slots 0, 12, 6, 18, 3, 15, …;
+     - the duty rule: round(24·d) slots lit, an exact half rounds down, and a higher duty only adds slots;
+     - `raster_binary`, slot k sampled at t + k/1440, and `build()` output.
+   - Simulated preview: `python -m vol2.subframe preview <scene> [--frame i]` [PROVED, simulation].
+     - It averages a packed frame's 24 slots and compares them with the 60 Hz frame.
+     - Static scenes agree to within half a slot (1/48). Moving scenes smear across the frame (max |diff| 0.96) and keep their total light.
+     - It assumes every lit slot adds the same glow. That is not measured.
+   - Open: the duty is renormalised per sub-frame (and per 60 Hz frame in `volplay`), so changes of duty over time are normalised away.
+     - `ball_pulse` renders the same at duty 0.35 and 1.0. The duty breathing of `fw_breathe` and `sphere_pulse` (their size still changes) and the final fade of `fw_stack` are lost the same way.
+     - Normalising over the whole loop would fix it, but it changes what the 60 Hz player shows. Joey decides.
 7. **New scenes.**
    - Add scenes in the style of the ribbons, which looked best by eye, plus any scene `volplay` lacks.
    - Each needs a test in `tests/test_scenes.py` and a `--dry` render.

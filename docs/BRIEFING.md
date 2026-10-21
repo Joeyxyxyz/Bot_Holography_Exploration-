@@ -274,6 +274,7 @@ Each run takes the rig lock. A file `STOP` ends the current scene; `STOPALL` end
   - `python -m vol2.subframe build <scene>`: each build folder gets a `procedure.txt`.
   - `python -m vol2.subframe planecheck`, then `python -m vol2.subframe play vol2\out\subframe\plane_check`.
   - Do not use `tools/play_loop.py` for packed frames: it reads grayscale.
+  - `python -m vol2.subframe preview <scene> [--frame i]`: offline only. It averages a packed frame's 24 slots and compares them with the 60 Hz frame (simulation).
 - **Holding frames:** `python tools/play_loop.py <s/frame> <loops> <png…>` with `PLAY_COLOR=blue` holds **mono 0/255** frames only (e.g. `*_hdmi.png`). For BGR or graded frames use `volplay` or `tools/shoot_bgr.py`. `holo/holo_show.py` holds a mono frame and takes a camera snapshot.
 
 **Code map:**
