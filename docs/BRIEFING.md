@@ -102,6 +102,7 @@ camera  ->   \/   (camera left of the projector, looking roughly straight throug
   | r_corner | 12 mm | hand, after Joey saw corner bending |
   | planeA_cols / planeB_cols | 584–645 / 695–750 | hand, from the scans and Joey's corner observation |
   | scene_windows: clean_A / clean_B / full_width | 588–643 / 697–748 / 560–785 | hand: the clean face windows and the full-width plane of the 2026-10-05 captures; the DMD columns the DMD-space scenes light [HEURISTIC] |
+  | scene_windows: warp_row_max | 1030 | hand: the DMD row below which the fwc_* drop the warp map's dots (2026-10-05 scan rows 1040–1080) [HEURISTIC] |
 
   - **Unknowns:** projector pitch / principal point, the diamond row-parity offset, and absorption length.
   - **Upside-down caveat.** The ray model still assumes an absorbing floor (the black base) and a free liquid surface on top. With the case inverted, the floor is clear acrylic and the black base is overhead. Floor reflections are not modelled, so reflected legs near the bottom and the joint-region estimates near the floor may be off [HEURISTIC].
@@ -247,7 +248,7 @@ camera  ->   \/   (camera left of the projector, looking roughly straight throug
 ```
 python -m vol2.volplay <scene> --dry --case-json configs/case_fit_tank_v4.json
 ```
-Note: the player reads the **latest** `runs/*_duty/duty_roi.json` and (for fwc_*) the latest `runs/*_warp_scan`; with no runs it falls back to the bundled `data/calibration/` copies. A new capture changes every scene's output. The DMD columns the curtain, ocean, plane and fw_* scenes light come from the case file's `scene_windows` (with its `rows`). If the case moves, re-map and re-fit, write a new case file with re-measured windows, and pass it with `--case-json` (`volplay` and `subframe build`); no code edit.
+Note: the player reads the **latest** `runs/*_duty/duty_roi.json` and (for fwc_*) the latest `runs/*_warp_scan`; with no runs it falls back to the bundled `data/calibration/` copies. A new capture changes every scene's output. The DMD columns the curtain, ocean, plane and fw_* scenes light come from the case file's `scene_windows` (with its `rows`), and so does the row cutoff the fwc_* apply to the warp map (`warp_row_max`). If the case moves, re-map and re-fit, write a new case file with re-measured windows, and pass it with `--case-json` (`volplay` and `subframe build`); no code edit.
 
 **Play at 60 Hz:**
 ```
