@@ -73,8 +73,9 @@ GROUPS = [
 ]
 
 FAVOURITES = {"ribbon", "fw_static", "fw_ribbon"}      # Joey's picks by eye, 2026-10-05
-SIZE_SCENES = {s for g in GROUPS if g["id"] == "solids" for s, _, _ in g["scenes"]}
-NEEDS_FIT = SIZE_SCENES                                  # placement comes from the fitted case pose
+SOLIDS = {s for g in GROUPS if g["id"] == "solids" for s, _, _ in g["scenes"]}
+SIZE_SCENES = SOLIDS - {"orbit"}                         # orbit's ball has a fixed size in vol2/volplay.py
+NEEDS_FIT = SOLIDS                                       # placement comes from the fitted case pose
 NEEDS_WARP = {s for g in GROUPS if g["id"] == "corrected" for s, _, _ in g["scenes"]}
 
 # the plane demo (tools/demo_planes.ps1): 10 scenes, 20 s each

@@ -490,14 +490,29 @@ def _period(name):
     return PERIODS[name]
 
 
-def play(frames, fps, seconds, progress=None):
+def stop_requested_since(t0_epoch) -> bool:
+    """True if the STOP file exists and was created at or after t0_epoch (time.time()), i.e. it is not stale."""
+    try:
+        return STOP.stat().st_mtime >= t0_epoch - 1.0      # 1 s slack for coarse file-system timestamps
+    except OSError:
+        return False
+
+
+def play(frames, fps, seconds, progress=None, stop_since=None):
     """Push frames (anything with len() and indexing; looped) at fps for seconds, holding the rig throughout.
-    progress(shown, dropped, elapsed_s), if given, is called about 4 times a second (for a UI)."""
+    progress(shown, dropped, elapsed_s), if given, is called about 4 times a second (for a UI).
+    stop_since (time.time() of a request): a STOP file created since then is honoured even if it appeared before
+    playback began (e.g. while frames were rendering); older STOP files are stale and removed.
+    The result's "stopped" is True when STOP ended playback early."""
     from rig.bench import Bench
     shown = dropped = 0
     elapsed = 0.0
+    stopped = False
     with Bench(camera=False, min_hold_s=0.0) as b:       # lock + window; DMD dark, lock released on any exit
-        STOP.unlink(missing_ok=True)                     # we hold the rig: any STOP left over is stale
+        if stop_since is not None and stop_requested_since(stop_since):
+            seconds = 0.0                                # stopped while we were getting ready
+        else:
+            STOP.unlink(missing_ok=True)                 # we hold the rig: any STOP left over is stale
         try:
             dt = 1.0 / fps
             t0 = time.perf_counter()
@@ -519,10 +534,11 @@ def play(frames, fps, seconds, progress=None):
                     progress(shown, dropped, now - t0)
                     next_report = now + 0.25
             elapsed = time.perf_counter() - t0
+            stopped = STOP.exists()
         finally:
             STOP.unlink(missing_ok=True)                 # only ever our own STOP: we hold the rig here
     return {"target_fps": fps, "achieved_fps": round(shown / max(elapsed, 1e-9), 1), "shown": shown,
-            "dropped": dropped, "seconds": round(elapsed, 1)}
+            "dropped": dropped, "seconds": round(elapsed, 1), "stopped": stopped}
 
 
 def main():

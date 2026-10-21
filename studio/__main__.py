@@ -27,7 +27,8 @@ def main(argv=None):
     threading.Thread(target=server.serve_forever, name="studio-http", daemon=True).start()
     mode = "LIVE: Play drives the projector" if studio.hardware else "PREVIEW ONLY (DLP_NO_HARDWARE is set)"
     print(f"\nHolo Studio  {server.url}  [{mode}]\n"
-          f"Stop anything playing: the STOP button, Esc on the page, Ctrl+C here, or create {stop_file_hint()}\n",
+          "To stop: the STOP button or Esc on the page (ends the whole job), Ctrl+C here (stops and closes the\n"
+          f"studio), or create the file {stop_file_hint()} (ends this studio's job and any player from this folder).\n",
           flush=True)
     if not a.no_browser:
         webbrowser.open(server.url)

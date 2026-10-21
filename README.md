@@ -40,15 +40,15 @@ This opens a page in your browser (served only on `127.0.0.1`):
   - *projector pattern*: what the mirrors send;
   - *on camera*: the real stop-motion capture, for the 8 scenes that have one.
 - **Adjust** duration, speed, brightness, size (solid shapes), and whether light comes from both faces or face B only.
-- **Play** on the projector. The big **STOP** button, the Esc key, or Ctrl+C in the console stops at once.
+- **Play** on the projector. The big **STOP** button or the Esc key stops at once. Ctrl+C in the console stops too, and closes the studio.
 - **Playlists:** build your own, or load the plane demo.
 - **Check the case:** shine the numbered grid on it to check it hasn't moved.
 
-**On Windows:** double-click `tools\holo_studio.bat`. Set `HOLO_PYTHON` once to your environment's `python.exe`.
+**On Windows:** double-click `tools\holo_studio.bat`. Set `HOLO_PYTHON` once to your environment's `python.exe`; quotes around the path are fine.
 
-**To try it without the projector:** set `DLP_NO_HARDWARE=1` first. Everything works except Play.
+**To try it without the projector:** set `DLP_NO_HARDWARE=1` first. Everything works except playing on the projector (Play, playlists and the grid).
 
-The studio drives the projector only through `rig/`, the same as the command-line player, and other web pages can't control it. See [SAFETY.md](SAFETY.md#holo-studio).
+The studio drives the projector only through `rig/`, the same as the command-line player, and other web pages can't control it. Closing the page stops what it started. See [SAFETY.md](SAFETY.md#holo-studio).
 
 ## Quick start (offline, any OS)
 

@@ -46,7 +46,12 @@ DEVICE_CLASSES = {"HDMIWindow", "Camera", "RigLock"}
 # Outside rig/: no other route to devices or other programs (process launch, native calls, dynamic imports,
 # other display toolkits). Add a narrow exception here, with a reason, if one is ever really needed.
 BANNED_MODULES_OUTSIDE_RIG = {"subprocess", "ctypes", "cffi", "importlib", "pygame", "pyglet", "tkinter", "PyQt5",
-                              "PyQt6", "PySide2", "PySide6", "wx", "serial", "socket", "PySpin"}
+                              "PyQt6", "PySide2", "PySide6", "wx", "serial", "socket", "PySpin", "webbrowser",
+                              "http", "socketserver", "asyncio"}
+# The only exceptions (each reviewed; see SAFETY.md, Holo Studio):
+#   studio/server.py   http.server  - the studio's local web server, bound to 127.0.0.1 only
+#   studio/__main__.py webbrowser   - opens the studio page (a fixed http://127.0.0.1 URL) in the browser
+ALLOWED_OUTSIDE_RIG = {"studio/server.py": {"http"}, "studio/__main__.py": {"webbrowser"}}
 BANNED_CALLS_OUTSIDE_RIG = {"__import__", "system", "startfile", "popen", "spawnl", "spawnv", "execv", "execl"}
 
 
@@ -104,8 +109,10 @@ def test_hardware_only_through_rig(p):
     """Outside rig/ and tests/: no PySpin or other device / process routes, no OpenCV display windows, and the
     device classes are never imported or built directly (only `with Bench(...)` or open_rig())."""
     tree = _tree(p)
+    allowed = ALLOWED_OUTSIDE_RIG.get(_rel(p), set())
     for node, mod, asname, name in _imports(tree):
-        assert mod.split(".")[0] not in BANNED_MODULES_OUTSIDE_RIG, f"{_rel(p)}:{node.lineno} imports {mod}"
+        top = mod.split(".")[0]
+        assert top not in BANNED_MODULES_OUTSIDE_RIG or top in allowed, f"{_rel(p)}:{node.lineno} imports {mod}"
         if mod.split(".")[0] == "rig":
             assert name not in DEVICE_CLASSES, f"{_rel(p)}:{node.lineno} imports {name}: use rig.bench.Bench"
             assert not (asname and name in ("Bench", "open_rig")), \

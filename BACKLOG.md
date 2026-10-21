@@ -26,6 +26,7 @@
 7. **New scenes.**
    - Add scenes in the style of the ribbons, which looked best by eye, plus any scene `volplay` lacks.
    - Each needs a test in `tests/test_scenes.py` and a `--dry` render.
+   - `ocean` and `ocean_storm` loop every 10 s, but face B's waves don't repeat in 10 s, so the loop has a visible jump. Give face B whole cycles per loop, or document the jump.
 8. **Viewer-independent warp.**
    - Today's correction holds for one camera position only.
    - Model the rounded-edge lensing so that a correction can be predicted for another viewpoint.

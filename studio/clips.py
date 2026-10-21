@@ -8,6 +8,7 @@ longer than MAX_FRAMES frames is rendered at a lower rate and pushed at that rat
 from __future__ import annotations
 
 import base64
+import collections
 import math
 import threading
 from dataclasses import dataclass
@@ -35,10 +36,14 @@ class Cancelled(Exception):
 
 def _num(d, k):
     v = d.get(k, DEFAULTS[k])
-    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
         raise ValueError(f"{k} must be a number")
     lo, hi = LIMITS[k]
-    if not lo <= v <= hi:
+    try:
+        ok = math.isfinite(v) and lo <= v <= hi
+    except OverflowError:                              # a huge integer
+        ok = False
+    if not ok:
         raise ValueError(f"{k} must be between {lo:g} and {hi:g}")
     return float(v)
 
@@ -86,14 +91,21 @@ def duty_lut():
         return _lut
 
 
+VOLUMES_PER_THREAD = 3
+
+
 def volume(mode="ab", L=30.0) -> volplay.Volume:
-    """One Volume per thread and (mode, L): building one traces every mirror (~1 s), so they are kept."""
+    """A Volume per thread and (mode, L), the last few kept: building one traces every mirror (~1 s)."""
     cache = getattr(_local, "volumes", None)
     if cache is None:
-        cache = _local.volumes = {}
+        cache = _local.volumes = collections.OrderedDict()
     key = (mode, round(L, 2))
-    if key not in cache:
+    if key in cache:
+        cache.move_to_end(key)
+    else:
         cache[key] = volplay.Volume(str(CASE_JSON), mode=mode, L=L)
+        while len(cache) > VOLUMES_PER_THREAD:
+            cache.popitem(last=False)
     return cache[key]
 
 
@@ -142,15 +154,14 @@ def _crop(blue):
 
 
 def clip_timing(s: Settings, seconds: float):
-    """(frames, fps): one loop of the scene at this speed, or just `seconds` when that is shorter."""
-    loop = volplay.PERIODS[s.scene] / s.speed
-    if seconds < loop:
-        return max(1, int(round(FPS * seconds))), FPS
-    exact = FPS * loop
+    """(frames, fps) covering one loop of the scene at this speed, or just `seconds` when that is shorter: at
+    60 fps, or fewer when that would exceed MAX_FRAMES (then fps = frames / span, never above 60)."""
+    span = min(seconds, volplay.PERIODS[s.scene] / s.speed)
+    exact = FPS * span
     if abs(exact - round(exact)) < 1e-6 and round(exact) <= MAX_FRAMES:
-        return int(round(exact)), FPS
-    n = max(1, min(MAX_FRAMES, int(round(exact))))
-    return n, n / loop
+        return max(1, int(round(exact))), FPS
+    n = max(1, min(MAX_FRAMES, int(math.floor(exact))))
+    return n, n / span
 
 
 def render_clip(s: Settings, seconds: float, cancel=None, progress=None) -> Clip:
@@ -259,7 +270,7 @@ _proj = {}
 def _projection(vol, shape, az, el):
     """Pixel index of every voxel for an orthographic view, with bounds fixed by the whole liquid volume so the
     framing does not jump between frames. Image up = physically up."""
-    key = (id(vol), shape, az, el)
+    key = (str(CASE_JSON), shape, az, el)          # every Volume here shares the one case geometry
     with _proj_lock:
         if key in _proj:
             return _proj[key]
@@ -304,8 +315,10 @@ def _outline(vol, img, frame_info, scale):
 
 
 def voxelise_fast(case, rays, beam_mm=1.0, step=0.25):
-    """vol2.simulate.voxelise (all legs) + blur, ~10x faster: bincount instead of np.add.at and OpenCV's separable
-    Gaussian instead of np.convolve along each axis. Same model; values agree to float rounding (test_studio)."""
+    """vol2.simulate.voxelise (all legs) + blur, several times faster: bincount instead of np.add.at, sample
+    positions stepped in float32, OpenCV's separable Gaussian instead of np.convolve. Same model and the same total
+    light; a sample lying on a voxel boundary can land in the neighbouring voxel, so single voxels differ by up to
+    ~1 % of the peak (test_studio). Fine for a preview; analysis code keeps using vol2.simulate."""
     C, uA, uB = case.axes()
     lo, hi = case.t, case.S - case.t
     na = int(np.ceil((hi - lo) / simulate.VOX))
@@ -341,7 +354,8 @@ def voxelise_fast(case, rays, beam_mm=1.0, step=0.25):
 def simulated_preview(s: Settings, cancel=None, progress=None) -> dict:
     """SIM_FRAMES samples over one loop: every lit mirror traced into the liquid (all legs, incl. total internal
     reflection), as line density with a 1 mm beam, seen orthographically from two directions.
-    [HEURISTIC] shape only: brightness grading, absorption and light through the corner are not modelled."""
+    [HEURISTIC] shape only: brightness grading, absorption and light through the corner are not modelled, so
+    brightness and L do not change it (the studio's preview cache ignores them for this view)."""
     vol, fn = scene_function(s)
     lut = duty_lut()
     period = volplay.PERIODS[s.scene]
@@ -381,5 +395,5 @@ def simulated_preview(s: Settings, cancel=None, progress=None) -> dict:
     return {"kind": "simulated", "sprite": _jpg_b64(sheet), "layout": layout, "loop_s": period,
             "views": [{"label": name, "x0": int(sum(widths[:i])), "w": int(widths[i] - 8)}
                       for i, (name, _, _) in enumerate(VIEWS)],
-            "note": "Simulation, shape only: brightness grading, absorption and light through the corner are "
-                    "not modelled [HEURISTIC]."}
+            "note": "A simulation of where light goes, not of how bright: brightness, fading in the dye and "
+                    "light through the rounded corner are not shown."}

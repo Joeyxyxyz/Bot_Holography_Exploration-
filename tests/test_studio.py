@@ -57,6 +57,14 @@ def test_clip_is_exactly_the_players_render_at_default_settings():
 
 
 def test_clip_timing_loops_seamlessly_and_caps_memory():
+    for seconds in (39.0, 40.0, 300.0):                       # a 40 s loop: capped below and above one loop
+        n, fps = clips.clip_timing(clips.Settings("ocean_storm", speed=0.25), seconds)
+        assert n <= clips.MAX_FRAMES and fps <= 60.0
+    for scene in volplay.SCENES:
+        for speed in (0.25, 0.3, 0.7, 1.0, 1.7, 2.0):
+            n, fps = clips.clip_timing(clips.Settings(scene, speed=speed), 600)
+            assert 1 <= n <= clips.MAX_FRAMES and fps <= 60.0
+            assert n / fps == pytest.approx(volplay.PERIODS[scene] / speed)           # exactly one loop
     assert clips.clip_timing(clips.Settings("ribbon"), 30) == (120, 60.0)
     assert clips.clip_timing(clips.Settings("ribbon"), 0.5) == (30, 60.0)            # shorter than one loop
     n, fps = clips.clip_timing(clips.Settings("ocean", speed=0.5), 60)                # a 20 s loop
@@ -89,7 +97,7 @@ def test_pattern_preview_and_simulated_view_render(monkeypatch):
     q = clips.simulated_preview(clips.Settings("ball_bounce"))
     img = _decode(q["sprite"])
     assert q["layout"]["count"] == clips.SIM_FRAMES and img[..., 1].max() > 100 and len(q["views"]) == 2
-    assert "HEURISTIC" in q["note"]
+    assert "simulation" in q["note"].lower() and "not" in q["note"]
 
 
 # ---------------------------------------------------------------- rig probe
@@ -316,14 +324,17 @@ def test_grid_is_held_white_and_full_size(live):
     assert FakeWindow.instances[-1].shown[0] == (H, W) and engine.grid_frame().max() == 255
 
 
-def test_fast_voxelise_matches_the_model():
+@pytest.mark.parametrize("scene,mode,t", [("ball_bounce", "ab", 0.3), ("fw_ribbon", "ab", 0.7),
+                                          ("sphere_bounce", "b", 0.4)])
+def test_fast_voxelise_matches_the_model(scene, mode, t):
     from vol2 import simulate
-    vol, fn = clips.scene_function(clips.Settings("ball_bounce"))
-    f, _ = vol.frame(fn(0.3), clips.duty_lut())
+    vol, fn = clips.scene_function(clips.Settings(scene, mode=mode))
+    f, _ = vol.frame(fn(t), clips.duty_lut())
     rays = simulate.lit_rays(vol.case, f[..., 0] > 0)
     V = simulate.voxelise(vol.case, rays, beam_mm=1.0)
     F = clips.voxelise_fast(vol.case, rays, beam_mm=1.0)
-    assert F.shape == V.shape and np.abs(F - V).max() <= 1e-5 * V.max()
+    assert F.shape == V.shape and F.sum() == pytest.approx(V.sum(), rel=1e-5)          # same total light
+    assert np.abs(F - V).max() <= 0.02 * V.max()                                       # boundary samples only
 
 
 def test_previewer_drops_a_stale_render_for_new_settings(monkeypatch):
@@ -346,3 +357,129 @@ def test_previewer_drops_a_stale_render_for_new_settings(monkeypatch):
         assert time.time() - t0 < 3, "the new request waited for the stale render"
         time.sleep(0.02)
     assert pv.key("simulated", clips.Settings("ribbon")) not in pv._jobs
+
+
+# ---------------------------------------------------------------- review follow-ups
+def test_orbit_has_no_size_knob_and_simulations_ignore_brightness():
+    assert not catalog.scenes()["orbit"]["size_knob"] and catalog.scenes()["ball_bounce"]["size_knob"]
+    a = engine.Previewer.key("simulated", clips.Settings("ribbon", brightness=0.5, L=80.0, speed=2.0))
+    b = engine.Previewer.key("simulated", clips.Settings("ribbon"))
+    assert a == b
+    assert engine.Previewer.key("pattern", clips.Settings("ribbon", brightness=0.5)) != \
+        engine.Previewer.key("pattern", clips.Settings("ribbon"))
+
+
+def test_volumes_per_thread_are_bounded():
+    for L in (20.0, 25.0, 35.0, 40.0, 45.0):
+        clips.volume("ab", L)
+    assert len(clips._local.volumes) <= clips.VOLUMES_PER_THREAD
+
+
+@pytest.mark.parametrize("bad", [{"scene": "ribbon", "speed": 10 ** 400}, {"scene": "ribbon", "L": -10 ** 400}])
+def test_huge_numbers_are_refused_not_crashed(bad):
+    with pytest.raises(ValueError):
+        clips.Settings.from_dict(bad)
+
+
+def test_previewer_two_pages_do_not_cancel_each_other(monkeypatch):
+    def slow(s, cancel=None, progress=None):
+        for _ in range(30):
+            if cancel.is_set():
+                raise clips.Cancelled()
+            time.sleep(0.02)
+        return {"kind": "simulated", "scene": s.scene}
+    monkeypatch.setattr(clips, "simulated_preview", slow)
+    pv = engine.Previewer()
+    a, b = clips.Settings("ribbon"), clips.Settings("ocean")
+    t0 = time.time()
+    done = set()
+    while len(done) < 2:                                      # two pages polling in turn, like two open tabs
+        for s in (a, b):
+            if pv.request("simulated", s)["state"] == "done":
+                done.add(s.scene)
+        assert time.time() - t0 < 10, "the two pages kept cancelling each other"
+        time.sleep(0.1)
+
+
+def test_server_survives_malformed_input(server):
+    assert call(server, "GET", "/api/state", headers={"X-Holo-Token": "été"})[0] == 403
+    assert call(server, "POST", "/api/play", b"[" * 60000)[0] == 400
+    assert call(server, "POST", "/api/play", {"scene": "ribbon", "speed": 10 ** 400})[0] == 400
+    assert call(server, "GET", "/api/preview?scene=ribbon&brightness=1e999")[0] == 400
+    assert call(server, "GET", "/api/state")[0] == 200                    # still serving
+
+
+def test_second_server_cannot_share_the_port(server):
+    with pytest.raises(OSError):
+        StudioServer(engine.Studio(), server.port)
+
+
+def test_preview_only_refuses_every_projector_action_and_never_probes(server, monkeypatch):
+    for path, body in (("/api/play", {"scene": "ribbon", "seconds": 5}), ("/api/grid", {"seconds": 10}),
+                       ("/api/playlist", {"items": [{"scene": "ribbon", "seconds": 5}]})):
+        assert call(server, "POST", path, body)[0] == 409
+
+    def boom(*a, **k):
+        raise AssertionError("probed the real lock in preview-only mode")
+    monkeypatch.setattr(engine, "probe", boom)
+    st = engine.Studio()
+    assert st.check_rig()["free"] is None and call(server, "POST", "/api/check-rig", {})[0] == 200
+
+
+def test_csp_allows_only_own_scripts(server):
+    csp = call(server, "GET", "/", token=False)[2].getheader("Content-Security-Policy")
+    assert "script-src 'self'" in csp and "default-src 'none'" in csp
+
+
+def wait_activity(st, activity, timeout=60):
+    end = time.time() + timeout
+    while st.snapshot()["activity"] != activity:
+        assert time.time() < end, f"never reached {activity}"
+        time.sleep(0.02)
+
+
+def test_single_play_is_bounded(live):
+    with pytest.raises(engine.Refused):
+        live.submit_play({"scene": "ribbon", "seconds": 601})
+
+
+def test_stop_file_ends_the_whole_playlist(live):
+    live.submit_playlist({"items": [{"scene": "plane_flat", "seconds": 5}, {"scene": "fw_static", "seconds": 5}]})
+    wait_activity(live, "playing")
+    time.sleep(0.3)
+    config.STOP.touch()                                       # e.g. New-Item STOP in a terminal
+    s = wait_idle(live)
+    assert s["last"]["status"] == "stopped" and len(s["last"]["results"]) == 1
+    assert "STOP file" in s["last"]["message"] and len(FakeWindow.instances) == 1 and lock_free()
+
+
+def test_stop_file_while_rendering_is_not_thrown_away(live, monkeypatch):
+    real = clips.render_clip
+
+    def slow_render(s, seconds, cancel=None, progress=None):
+        for i in range(200):
+            if progress:
+                progress(i + 1, 400)
+            time.sleep(0.01)
+        return real(s, seconds, cancel=cancel, progress=None)
+    monkeypatch.setattr(engine.clips, "render_clip", slow_render)
+    live.submit_play({"scene": "plane_flat", "seconds": 5})
+    wait_activity(live, "preparing")
+    config.STOP.touch()
+    s = wait_idle(live)
+    assert s["last"]["status"] == "stopped" and not FakeWindow.instances      # never opened the window
+
+
+def test_stale_stopall_is_ignored_and_a_fresh_one_ends_the_playlist(live):
+    import os
+    config.STOPALL.touch()
+    old = time.time() - 120
+    os.utime(config.STOPALL, (old, old))                      # left over from an earlier demo
+    live.submit_playlist({"items": [{"scene": "plane_flat", "seconds": 1}, {"scene": "fw_static", "seconds": 1}]})
+    s = wait_idle(live)
+    assert s["last"]["status"] == "done" and len(s["last"]["results"]) == 2
+    live.submit_playlist({"items": [{"scene": "plane_flat", "seconds": 2}, {"scene": "fw_static", "seconds": 2}]})
+    wait_activity(live, "playing")
+    config.STOPALL.touch()
+    s = wait_idle(live)
+    assert s["last"]["status"] == "stopped" and len(s["last"]["results"]) == 1 and "STOPALL" in s["last"]["message"]

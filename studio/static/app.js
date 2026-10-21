@@ -12,19 +12,21 @@
     set(k, v) { try { localStorage.setItem("holo." + k, JSON.stringify(v)); } catch { /* private mode */ } },
   };
 
+  const DEFAULTS = { seconds: 30, speed: 1, brightness: 1, size: 1, mode: "ab", L: 30 };
   let CAT = null;                       // catalogue from the server
   let STATE = null;                     // last state snapshot
   let current = null;                   // selected scene id
   let view = store.get("view", "simulated");
-  const settings = Object.assign({ seconds: 30, speed: 1, brightness: 1, size: 1, mode: "ab", L: 30 },
-                                 store.get("settings", {}));
+  const settings = Object.assign({}, DEFAULTS, store.get("settings", {}));
   let playlist = store.get("playlist", []);
+  let startedHere = false;              // this page started the running job (closing it stops the job)
+  let wasBusy = false;
 
-  async function api(path, body) {
+  async function api(path, body, extra) {
     const opt = body === undefined
       ? { headers: { "X-Holo-Token": TOKEN } }
-      : { method: "POST", headers: { "X-Holo-Token": TOKEN, "Content-Type": "application/json" },
-          body: JSON.stringify(body) };
+      : Object.assign({ method: "POST", headers: { "X-Holo-Token": TOKEN, "Content-Type": "application/json" },
+                        body: JSON.stringify(body) }, extra || {});
     try {
       const r = await fetch(path, opt);
       let data = {};
@@ -45,20 +47,57 @@
     s = Math.max(0, Math.round(s || 0));
     return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} min` : `${s} s`;
   };
+  const clamp = (v, lo, hi, d) => (typeof v === "number" && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
 
+  // ------------------------------------------------------------- banner and announcements
+  let bannerIsError = false;
   function banner(msg, isError) {
     const b = $("banner");
+    bannerIsError = !!(msg && isError);
+    b.classList.toggle("error", bannerIsError);
     if (!msg) { b.hidden = true; return; }
-    b.textContent = msg;
-    b.classList.toggle("error", !!isError);
+    b.querySelector(".msg").textContent = msg;
     b.hidden = false;
   }
+  function infoBanner() {                // the standing note in preview-only mode
+    if (STATE && !STATE.hardware && !bannerIsError) {
+      banner("Preview only: this studio was started with DLP_NO_HARDWARE=1. Scenes preview and simulate here; playing on the projector is off.");
+    }
+  }
+  function announce(text) { $("announce").textContent = text; }
 
   // ------------------------------------------------------------- catalogue and scene list
+  function sanitizeSettings() {
+    const lim = CAT.limits;
+    settings.seconds = clamp(settings.seconds, 5, Math.min(300, lim.seconds[1]), DEFAULTS.seconds);
+    for (const k of ["speed", "brightness", "size", "L"]) settings[k] = clamp(settings[k], lim[k][0], lim[k][1], DEFAULTS[k]);
+    if (settings.mode !== "ab" && settings.mode !== "b") settings.mode = "ab";
+    store.set("settings", settings);
+  }
+
+  function sanitizePlaylist() {
+    const lim = CAT.limits;
+    playlist = (Array.isArray(playlist) ? playlist : [])
+      .filter((it) => it && CAT.scenes[it.scene])
+      .slice(0, CAT.max_playlist_items)
+      .map((it) => ({
+        scene: it.scene,
+        seconds: clamp(it.seconds, lim.seconds[0], lim.seconds[1], 20),
+        speed: clamp(it.speed, lim.speed[0], lim.speed[1], 1),
+        brightness: clamp(it.brightness, lim.brightness[0], lim.brightness[1], 1),
+        size: clamp(it.size, lim.size[0], lim.size[1], 1),
+        mode: it.mode === "b" ? "b" : "ab",
+        L: clamp(it.L, lim.L[0], lim.L[1], 30),
+      }));
+  }
+
   async function loadCatalog() {
     const r = await api("/api/catalog");
     if (!r.ok) { banner(r.data.error || "Could not load the scenes.", true); return; }
     CAT = r.data;
+    sanitizeSettings();
+    sanitizePlaylist();
+    bindControls();
     const g = $("groups");
     g.textContent = "";
     for (const grp of CAT.groups) {
@@ -79,13 +118,11 @@
       }
       g.append(box);
     }
-    $("duty").textContent = `Duty curve: ${CAT.duty_curve}.`;
-    const lim = CAT.limits;
-    $("seconds").max = Math.min(300, lim.seconds[1]);
     $("grid-seconds").min = CAT.grid_seconds[0];
     $("grid-seconds").max = CAT.grid_seconds[1];
-    select(CAT.scenes[store.get("scene", "ribbon")] ? store.get("scene", "ribbon") : "ribbon");
-    renderPlaylist();
+    const saved = store.get("scene", "ribbon");
+    select(CAT.scenes[saved] ? saved : "ribbon");
+    renderPlaylist(true);
   }
 
   function select(id) {
@@ -104,8 +141,10 @@
     if (sc.needs_warp) tags.append(el("span", "tag warn", "needs the case unmoved since 2026-10-05"));
     if (sc.needs_fit) tags.append(el("span", "tag warn", "depends on the case fit"));
     $("size-ctl").hidden = !sc.size_knob;
-    const camTab = document.querySelector('[data-view="camera"]');
-    camTab.hidden = !sc.camera;
+    $("tab-camera").hidden = !sc.camera;
+    $("canvas").setAttribute("aria-label", `Animated preview of ${sc.title}`);
+    anim.data = null;                                          // never show the previous scene under the spinner
+    $("viewer-note").textContent = "";
     if (view === "camera" && !sc.camera) setView("simulated", false);
     requestPreview();
   }
@@ -119,7 +158,10 @@
     view = v;
     store.set("view", v);
     for (const t of document.querySelectorAll('[role="tab"]')) {
-      t.setAttribute("aria-selected", t.dataset.view === v ? "true" : "false");
+      const on = t.dataset.view === v;
+      t.setAttribute("aria-selected", on ? "true" : "false");
+      t.tabIndex = on ? 0 : -1;
+      if (on) $("viewer").setAttribute("aria-labelledby", t.id);
     }
     if (fetch) requestPreview();
   }
@@ -133,9 +175,8 @@
   }
 
   function previewQuery() {
-    const q = new URLSearchParams({ scene: current, mode: settings.mode, brightness: settings.brightness,
-                                    size: settings.size, L: settings.L });
-    return q.toString();
+    return new URLSearchParams({ scene: current, mode: settings.mode, brightness: settings.brightness,
+                                 size: settings.size, L: settings.L }).toString();
   }
 
   async function requestPreview() {
@@ -149,7 +190,8 @@
       cam.hidden = false;
       cam.src = `/figures/${encodeURIComponent(current)}`;
       viewerMsg("");
-      $("viewer-note").textContent = "Real stop-motion camera capture (16 frames held one at a time), 2026-10-05.";
+      $("viewer-note").textContent = "Real stop-motion capture from the bench camera (16 frames held one at a time, "
+        + "brightness-stretched), 2026-10-05.";
       return;
     }
     cam.hidden = true;
@@ -177,9 +219,9 @@
         canvas.width = L.w;
         canvas.height = L.h;
         viewerMsg(r.data.kind === "pattern" && !r.data.lit
-          ? "Nothing lit at this brightness: the duty curve's dead zone swallows it. Raise the brightness." : "");
+          ? "Nothing lit at this brightness: the projector cannot show light this dim. Raise the brightness." : "");
         $("viewer-note").textContent = r.data.kind === "pattern"
-          ? "What the mirrors send (blue only), with true mirror proportions. Each lit mirror becomes a ray of glowing light in the liquid."
+          ? "What the mirrors send (blue only), drawn in true proportions. Each lit mirror becomes a ray of glowing light in the liquid."
           : r.data.note;
         // queue the other view in the background so switching tabs is quick
         api(`${kind === "pattern" ? "/api/simulate" : "/api/preview"}?${previewQuery()}`);
@@ -225,17 +267,22 @@
 
   function frame(now) {
     const canvas = $("canvas");
-    if (anim.data && anim.img && !canvas.hidden) {
+    if (!canvas.hidden) {
       const ctx = canvas.getContext("2d");
-      const L = anim.data.layout;
-      const loop = Math.max(0.05, anim.data.loop_s / settings.speed);
-      const pos = (((now - anim.start) / 1000) % loop) / loop * L.count;
-      const k = Math.floor(pos);
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, L.w, L.h);
-      drawTile(ctx, k, 1);
-      if (L.count > 1) drawTile(ctx, k + 1, pos - k);      // cross-fade: smooth motion from few frames
-      overlay(ctx);
+      if (anim.data && anim.img) {
+        const L = anim.data.layout;
+        const loop = Math.max(0.05, anim.data.loop_s / settings.speed);
+        const pos = (((now - anim.start) / 1000) % loop) / loop * L.count;
+        const k = Math.floor(pos);
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, L.w, L.h);
+        drawTile(ctx, k, 1);
+        if (L.count > 1) drawTile(ctx, k + 1, pos - k);    // cross-fade: smooth motion from few frames
+        overlay(ctx);
+      } else {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
     }
     requestAnimationFrame(frame);
   }
@@ -249,7 +296,10 @@
     L: (v) => `${v} mm`,
   };
 
+  let bound = false;
   function bindControls() {
+    if (bound) return;
+    bound = true;
     for (const k of Object.keys(outputs)) {
       const inp = $(k);
       inp.value = settings[k];
@@ -272,20 +322,39 @@
         requestPreview();
       });
     }
-    for (const t of document.querySelectorAll('[role="tab"]')) {
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
+    for (const t of tabs) {
       t.addEventListener("click", () => setView(t.dataset.view));
+      t.addEventListener("keydown", (e) => {                    // arrow keys move between visible tabs
+        if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+        const vis = tabs.filter((x) => !x.hidden);
+        const i = vis.indexOf(t) + (e.key === "ArrowRight" ? 1 : -1);
+        const next = vis[(i + vis.length) % vis.length];
+        next.focus();
+        setView(next.dataset.view);
+        e.preventDefault();
+      });
     }
-    setView(view, false);
+    setView(view === "camera" ? "simulated" : view, false);
     $("play").addEventListener("click", play);
-    $("stop").addEventListener("click", stop);
     $("add").addEventListener("click", addToPlaylist);
     $("pl-play").addEventListener("click", playPlaylist);
-    $("pl-clear").addEventListener("click", () => { playlist = []; renderPlaylist(); });
+    $("pl-clear").addEventListener("click", () => { playlist = []; banner(""); infoBanner(); renderPlaylist(true); });
     $("pl-demo").addEventListener("click", loadDemo);
     $("grid").addEventListener("click", showGrid);
+    $("grid-seconds").addEventListener("input", updateButtons);
+  }
+
+  // STOP, Esc and closing the page work from the first moment, even if the scene list failed to load
+  function bindSafety() {
+    $("stop").addEventListener("click", stop);
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { e.preventDefault(); stop(); }
+      if (e.key === "Escape" && !e.repeat) { e.preventDefault(); stop(); }
     });
+    window.addEventListener("pagehide", () => {               // closing or reloading the page stops its job
+      if (startedHere && STATE && STATE.busy) api("/api/stop", {}, { keepalive: true });
+    });
+    $("banner").querySelector(".close").addEventListener("click", () => { banner(""); infoBanner(); });
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) api("/api/check-rig", {}).then(poll);
     });
@@ -302,16 +371,27 @@
     banner("");
     const r = await api(path, body);
     if (!r.ok) banner(r.data.error || `Could not ${what}.`, true);
+    else startedHere = true;
+    infoBanner();
     poll();
     return r;
   }
 
   const play = () => post("/api/play", sceneBody(), "start playing");
-  const showGrid = () => post("/api/grid", { seconds: parseFloat($("grid-seconds").value) || 60 }, "show the grid");
+
+  function gridSeconds() {
+    const v = parseFloat($("grid-seconds").value);
+    const [lo, hi] = CAT ? CAT.grid_seconds : [5, 600];
+    return isFinite(v) && v >= lo && v <= hi ? v : null;
+  }
+  function showGrid() {
+    const s = gridSeconds();
+    if (s === null) return;
+    post("/api/grid", { seconds: s }, "show the grid");
+  }
 
   async function stop() {
-    const s = $("status");
-    s.textContent = "Stopping…";
+    $("status").textContent = "Stopping…";
     const r = await api("/api/stop", {});
     if (!r.ok) banner(r.data.error || "Could not reach the studio to stop. Press Ctrl+C in its console.", true);
     poll();
@@ -319,45 +399,53 @@
 
   // ------------------------------------------------------------- playlist
   function addToPlaylist() {
-    if (!current) return;
-    if (playlist.length >= (CAT.max_playlist_items || 20)) { banner("The playlist is full.", true); return; }
+    if (!current || !CAT) return;
+    if (playlist.length >= CAT.max_playlist_items) { banner("The playlist is full.", true); return; }
     playlist.push(sceneBody());
-    renderPlaylist();
+    renderPlaylist(true);
   }
 
   function loadDemo() {
     playlist = CAT.demo.map((id) => ({ scene: id, seconds: 20, speed: 1, brightness: 1, size: 1, mode: "ab", L: 30 }));
-    renderPlaylist();
+    banner(""); infoBanner();
+    renderPlaylist(true);
   }
 
   function playPlaylist() {
-    if (!playlist.length) { banner("The playlist is empty.", true); return; }
+    if (!playlist.length) return;
     post("/api/playlist", { items: playlist }, "start the playlist");
   }
 
-  function renderPlaylist() {
+  const playlistTotal = () => playlist.reduce((a, it) => a + it.seconds, 0);
+  let playlistSig = "";
+  function renderPlaylist(force) {
+    const now = STATE && STATE.now && STATE.now.kind === "playlist" ? STATE.now.index : 0;
+    const sig = JSON.stringify([playlist, now]);
+    if (!force && sig === playlistSig) return;                // keep focus on the list between polls
+    playlistSig = sig;
     store.set("playlist", playlist);
     const ol = $("playlist");
     ol.textContent = "";
-    const now = STATE && STATE.now && STATE.now.kind === "playlist" ? STATE.now.index : 0;
     playlist.forEach((it, i) => {
       const sc = CAT && CAT.scenes[it.scene];
+      const title = sc ? sc.title : it.scene;
       const li = el("li", i + 1 === now ? "now" : "");
-      li.append(el("span", "", sc ? sc.title : it.scene), el("span", "meta", ` · ${fmtS(it.seconds)}`
+      li.append(el("span", "", title), el("span", "meta", ` · ${fmtS(it.seconds)}`
         + (it.speed !== 1 ? ` · ${it.speed}×` : "") + (it.mode === "b" ? " · face B" : "")));
       const x = el("button", "", "✕");
       x.type = "button";
       x.title = "Remove";
-      x.addEventListener("click", () => { playlist.splice(i, 1); renderPlaylist(); });
+      x.setAttribute("aria-label", `Remove ${title} from the playlist`);
+      x.addEventListener("click", () => { playlist.splice(i, 1); renderPlaylist(true); });
       li.append(x);
       ol.append(li);
     });
     $("pl-empty").hidden = playlist.length > 0;
-    const total = playlist.reduce((a, it) => a + it.seconds, 0);
+    const total = playlistTotal();
     const max = CAT ? CAT.max_playlist_s : 1800;
     $("pl-total").textContent = playlist.length
       ? `${playlist.length} scene${playlist.length > 1 ? "s" : ""}, ${fmtS(total)} in total`
-        + (total > max ? ` (over the ${fmtS(max)} limit)` : "") : "";
+        + (total > max ? ` (over the ${fmtS(max)} limit: remove some)` : "") : "";
     updateButtons();
   }
 
@@ -374,29 +462,43 @@
       default: break;
     }
     if (!s.hardware) return ["Preview only · projector off", "off"];
-    if (s.rig.free === false) return [`Rig busy · ${s.rig.holder}`, "busy"];
-    return ["Ready · projector free", "ok"];
+    if (s.rig.free === false) return ["Projector in use by another program", "busy"];
+    return ["Ready", "ok"];
   }
 
   function updateButtons() {
     const s = STATE;
-    const live = s && s.hardware;
-    const busy = s && s.busy;
-    for (const id of ["play", "grid", "pl-play"]) $(id).disabled = !live || busy;
-    $("pl-play").disabled = $("pl-play").disabled || !playlist.length;
+    const live = !!(s && s.hardware);
+    const busy = !!(s && s.busy);
+    const max = CAT ? CAT.max_playlist_s : 1800;
+    $("play").disabled = !live || busy;
+    $("grid").disabled = !live || busy || gridSeconds() === null;
+    $("pl-play").disabled = !live || busy || !playlist.length || playlistTotal() > max;
+    $("grid-hint").textContent = gridSeconds() === null && CAT
+      ? `Hold for ${CAT.grid_seconds[0]}–${CAT.grid_seconds[1]} s.` : "";
     $("play-hint").textContent = !s ? "" : !s.hardware
-      ? "Preview only: this studio was started with DLP_NO_HARDWARE=1, so it cannot drive the projector."
+      ? "Preview only: this studio cannot drive the projector."
       : busy ? "Something is playing. Press STOP (or Esc) first."
-      : s.rig.free === false ? "Another program is using the projector and camera right now. Play will say so if it is still busy."
-      : "Plays on the projector over HDMI. The window opens on the projector's screen; STOP or Esc ends it.";
+      : s.rig.free === false ? `The projector and camera are in use by another program (${s.rig.holder}). Wait for it to finish.`
+      : "Plays on the projector. Its window opens on the projector's screen; STOP or Esc ends it.";
   }
 
+  let lastStatus = "";
+  let lastActivity = "";
   function renderState() {
     const s = STATE;
     const [text, cls] = statusOf(s);
     const st = $("status");
-    st.textContent = text;
+    if (text !== lastStatus) { st.textContent = text; lastStatus = text; }
     st.className = `status ${cls}`;
+    if (s && s.activity !== lastActivity) {                     // announce changes, not every tick
+      const n = s.now || {};
+      const what = { queued: `Starting ${n.title || ""}`, preparing: `Preparing ${n.title || ""}`,
+                     playing: `Playing ${n.title || ""}`, holding: "Showing the grid",
+                     idle: s.last ? `${LAST[s.last.status] || s.last.status}` : "Ready" }[s.activity];
+      if (lastActivity) announce(what || "");
+      lastActivity = s.activity;
+    }
     const pr = $("progress");
     const n = (s && s.now) || {};
     if (s && (s.activity === "preparing" || s.activity === "playing" || s.activity === "holding")) {
@@ -404,23 +506,25 @@
       pr.hidden = false;
       pr.querySelector(".bar").style.width = `${Math.round(100 * f)}%`;
       pr.querySelector(".ptext").textContent = s.activity === "preparing" ? "preparing frames"
-        : `${n.fps ? n.fps + " fps · " : ""}${n.dropped || 0} late frames`;
+        : `${n.fps ? "target " + n.fps + " fps · " : ""}${n.dropped || 0} late frames`;
     } else {
       pr.hidden = true;
     }
-    if (s && !s.hardware) {
-      $("banner").classList.contains("error") || banner(
-        "Preview only: DLP_NO_HARDWARE is set. Scenes preview and simulate here; playing on the projector is off.");
-    }
+    infoBanner();
     renderLast(s && s.last);
     renderLog(s ? s.log : []);
-    renderPlaylist();
+    renderPlaylist(false);
+    updateButtons();
   }
 
-  const LAST = { done: "Finished", stopped: "Stopped", busy: "Rig busy", refused: "Refused by a safety check",
+  const LAST = { done: "Finished", stopped: "Stopped", busy: "Projector busy", refused: "Refused by a safety check",
                  error: "Error" };
 
+  let lastSig = "";
   function renderLast(last) {
+    const sig = JSON.stringify(last || null);
+    if (sig === lastSig) return;
+    lastSig = sig;
     const box = $("last");
     box.textContent = "";
     if (!last) { box.append(el("p", "muted", "Nothing played yet.")); return; }
@@ -434,29 +538,44 @@
     }
   }
 
+  let logSig = "";
   function renderLog(log) {
+    const sig = log.length ? `${log.length}:${log[log.length - 1].t}:${log[log.length - 1].msg}` : "";
+    if (sig === logSig) return;
+    logSig = sig;
     const ol = $("log");
     ol.textContent = "";
     for (const e of [...log].reverse()) ol.append(el("li", "", `${e.t}  ${e.msg}`));
   }
 
   let pollTimer = null;
+  let polling = false;
   async function poll() {
     clearTimeout(pollTimer);
+    if (polling) { pollTimer = setTimeout(poll, 150); return; }   // one request in flight at a time
+    polling = true;
     const r = await api("/api/state");
+    polling = false;
     if (r.ok) {
       STATE = r.data;
+      if (wasBusy && !STATE.busy) {                              // a job just ended
+        startedHere = false;
+        api("/api/check-rig", {});
+      }
+      wasBusy = STATE.busy;
       renderState();
     } else {
       const st = $("status");
-      st.textContent = r.status === 403 ? "Session expired: reload the page" : "Studio not reachable";
+      st.textContent = lastStatus = r.status === 403 ? "Session expired: reload the page" : "Studio not reachable";
       st.className = "status busy";
     }
+    clearTimeout(pollTimer);
     pollTimer = setTimeout(poll, STATE && STATE.busy ? 400 : 2000);
   }
 
   // ------------------------------------------------------------- start
-  bindControls();
+  bindSafety();
   requestAnimationFrame(frame);
+  poll();
   loadCatalog().then(() => api("/api/check-rig", {})).then(poll);
 })();

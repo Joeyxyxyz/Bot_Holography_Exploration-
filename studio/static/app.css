@@ -32,9 +32,10 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4p
 /* ------------------------------------------------------------- header */
 .top {
   position: sticky; top: 0; z-index: 10;
-  display: flex; align-items: center; gap: 16px; padding: 12px 20px;
   background: rgba(10, 14, 21, 0.94); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line);
 }
+.top-row { display: flex; align-items: center; gap: 16px; padding: 12px 20px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .brand { display: flex; align-items: center; gap: 12px; margin-right: auto; min-width: 0; }
 .brand h1 { font-size: 1.25rem; }
 .brand p { margin: 0; color: var(--muted); font-size: 0.85rem; }
@@ -58,14 +59,16 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4p
 @keyframes pulse { 50% { opacity: 0.35; } }
 .stop {
   border: 0; border-radius: 10px; padding: 11px 26px; font-weight: 800; letter-spacing: 0.08em; cursor: pointer;
-  background: var(--danger); color: white; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
+  background: #dc2626; color: white; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);   /* 4.8:1 with white */
 }
 .stop:hover { background: var(--danger-2); }
 .stop:focus-visible { outline: 3px solid white; outline-offset: 2px; }
-.progress { position: sticky; top: 59px; z-index: 9; height: 22px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.progress { position: relative; height: 22px; background: var(--panel); border-top: 1px solid var(--line); }
 .progress .bar { height: 100%; width: 0; background: linear-gradient(90deg, var(--blue-2), var(--blue)); transition: width 0.35s linear; }
 .progress .ptext { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
-.banner { margin: 12px 20px 0; padding: 10px 14px; border-radius: 10px; background: #2a2210; border: 1px solid #5c4513; color: #f8dfa8; }
+.banner { margin: 12px 20px 0; padding: 10px 14px; border-radius: 10px; background: #2a2210; border: 1px solid #5c4513; color: #f8dfa8; display: flex; gap: 12px; align-items: flex-start; }
+.banner .msg { flex: 1; }
+.banner .close { border: 0; background: transparent; color: inherit; cursor: pointer; padding: 0 4px; font-size: 1rem; }
 .banner.error { background: #2a1214; border-color: #6b1d22; color: #fecaca; }
 
 /* ------------------------------------------------------------- layout */
@@ -174,12 +177,11 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px 
   .side { grid-column: 2; position: static; max-height: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 }
 @media (max-width: 760px) {
-  .top { flex-wrap: wrap; padding: 10px 14px; }
+  .top-row { flex-wrap: wrap; padding: 10px 14px; }
   .status { order: 3; max-width: 100%; width: 100%; }
-  .progress { top: 104px; }
   .layout { grid-template-columns: minmax(0, 1fr); padding: 14px; }
   .scenes { position: static; max-height: none; grid-row: auto; }
   .side { grid-column: auto; }
-  #groups { display: flex; gap: 8px; overflow-x: auto; }
-  .group { min-width: 220px; }
+  #groups { display: flex; gap: 8px; overflow-x: auto; max-height: 40vh; }
+  .group { min-width: 220px; overflow-y: auto; }
 }

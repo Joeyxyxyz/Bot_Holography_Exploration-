@@ -13,6 +13,7 @@ from __future__ import annotations
 import hmac
 import json
 import secrets
+import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -51,6 +52,7 @@ class Handler(BaseHTTPRequestHandler):
     server: StudioServer
     server_version = "HoloStudio"
     sys_version = ""
+    timeout = 15                       # an idle or half-sent connection cannot hold a server thread forever
 
     def log_message(self, fmt, *args):           # quiet: the studio logs what matters itself
         pass
@@ -85,7 +87,8 @@ class Handler(BaseHTTPRequestHandler):
         return True
 
     def _token_ok(self):
-        if not hmac.compare_digest(self.headers.get("X-Holo-Token", ""), self.server.token):
+        sent = self.headers.get("X-Holo-Token", "").encode("utf-8", "surrogateescape")
+        if not hmac.compare_digest(sent, self.server.token.encode("ascii")):
             self._error(403, "missing or wrong token: reload the studio page")
             return False
         return True
@@ -108,7 +111,7 @@ class Handler(BaseHTTPRequestHandler):
             return None
         try:
             body = json.loads(self.rfile.read(n) or b"{}")
-        except ValueError:
+        except (ValueError, RecursionError):
             self._error(400, "invalid JSON")
             return None
         if not isinstance(body, dict):
@@ -118,6 +121,25 @@ class Handler(BaseHTTPRequestHandler):
 
     # ---------------------------------------------------------------- routes
     def do_GET(self):
+        self._guard(self._get)
+
+    def do_POST(self):
+        self._guard(self._post)
+
+    def _guard(self, fn):
+        """Any unexpected error becomes a 500 for this request; the server and the rig job carry on."""
+        try:
+            fn()
+        except (BrokenPipeError, ConnectionResetError, TimeoutError):
+            pass
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            try:
+                self._error(500, f"internal error ({type(e).__name__})")
+            except Exception:  # noqa: BLE001 - headers may already be out
+                pass
+
+    def _get(self):
         if not self._host_ok():
             return
         url = urlsplit(self.path)
@@ -163,7 +185,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(202, {"state": j["state"], "progress": j["progress"]})
         return self._error(404, "not found")
 
-    def do_POST(self):
+    def _post(self):
         if not self._host_ok() or not self._token_ok():
             return
         body = self._body()

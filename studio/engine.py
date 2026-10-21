@@ -2,8 +2,12 @@
 and the rig is released), previews render on a background thread, and the page reads a state snapshot.
 
 Hardware is only ever touched through vol2.volplay.play(), which opens rig.bench.Bench: shared rig lock, HDMI
-window checks, USB/HID guard, DMD blanked and lock released on every exit. Stop = the job's cancel flag (raised
-inside the player's progress callback) plus the repo STOP file the player already watches."""
+window checks, USB/HID guard, DMD blanked and lock released on every exit.
+
+Stopping a job (all of it, not just the current scene): the STOP button / Esc (the job's cancel flag, checked
+while rendering and ~4x a second while playing, plus the repo STOP file), the repo STOP file created by anyone
+since the job was submitted, or a STOPALL file created since then (between scenes). STOP / STOPALL files older
+than the job are leftovers and are ignored."""
 from __future__ import annotations
 
 import collections
@@ -56,6 +60,8 @@ class Job:
     kind: str                          # "play", "playlist" or "grid"
     items: list
     cancel: threading.Event = dataclasses.field(default_factory=threading.Event)
+    created: float = dataclasses.field(default_factory=time.time)
+    stopped_by: str = ""
 
 
 def _seconds(d, lo, hi, default):
@@ -65,6 +71,14 @@ def _seconds(d, lo, hi, default):
     return float(v)
 
 
+def _fresh(path, since) -> bool:
+    """The file exists and was created at or after `since` (1 s slack for coarse timestamps)."""
+    try:
+        return path.stat().st_mtime >= since - 1.0
+    except OSError:
+        return False
+
+
 def grid_frame():
     """The 2026-10-05 numbered grid (col 1 at DMD 376, row A at 477), white, as Joey called out the case on."""
     from tools.numgrid import WIDE, numgrid
@@ -72,39 +86,48 @@ def grid_frame():
 
 
 class Previewer:
-    """Pattern previews and simulated views, rendered one at a time on a daemon thread, newest request first."""
+    """Pattern previews and simulated views, rendered one at a time on a daemon thread, newest request first.
+    A render nobody has asked about for STALE_S (the page re-asks every 0.5 s while it waits) is dropped when
+    other settings are requested, so moving on is quick but two open pages never cancel each other."""
 
     MAX_QUEUE = 8
     MAX_RESULTS = 96
+    STALE_S = 1.5
 
     def __init__(self):
         self._cv = threading.Condition()
-        self._jobs = collections.OrderedDict()           # key -> {"state", "progress", "result", "error"}
+        self._jobs = collections.OrderedDict()      # key -> {"state", "progress", "result", "error", ...}
         self._queue = collections.deque()
         threading.Thread(target=self._worker, name="studio-previews", daemon=True).start()
 
     @staticmethod
     def key(kind, s: clips.Settings):
-        canon = dataclasses.replace(s, speed=1.0, size=s.size if s.scene in catalog.SIZE_SCENES else 1.0)
+        size = s.size if s.scene in catalog.SIZE_SCENES else 1.0
+        if kind == "simulated":                     # the simulation shows which mirrors are lit, not how bright
+            canon = dataclasses.replace(s, speed=1.0, size=size, brightness=1.0, L=clips.DEFAULTS["L"])
+        else:
+            canon = dataclasses.replace(s, speed=1.0, size=size)
         return (kind, canon)
 
     def request(self, kind, s: clips.Settings) -> dict:
         k = self.key(kind, s)
+        now = time.monotonic()
         with self._cv:
-            for other, oj in self._jobs.items():          # someone moved on: drop a render for other settings
-                if oj["state"] == "working" and other[1] != k[1]:
+            for other, oj in self._jobs.items():
+                if oj["state"] == "working" and other != k and now - oj["asked"] > self.STALE_S:
                     oj["cancel"].set()
             j = self._jobs.get(k)
             if j is None or j["state"] == "error":
                 j = self._jobs[k] = {"state": "queued", "progress": 0.0, "result": None, "error": None,
-                                     "cancel": threading.Event()}
+                                     "cancel": threading.Event(), "asked": now}
+            j["asked"] = now
             self._jobs.move_to_end(k)
             if j["state"] == "working" and j["cancel"].is_set():
-                j["cancel"].clear()                         # asked for again before the worker gave up on it
+                j["cancel"].clear()                     # asked for again before the worker gave up on it
             if j["state"] == "queued":
                 if k in self._queue:
                     self._queue.remove(k)
-                self._queue.appendleft(k)                # newest first: people click around
+                self._queue.appendleft(k)               # newest first: people click around
                 while len(self._queue) > self.MAX_QUEUE:
                     self._jobs.pop(self._queue.pop(), None)
                 self._cv.notify()
@@ -114,7 +137,7 @@ class Previewer:
                     self._jobs.pop(old)
                 else:
                     break
-            return {key: v for key, v in j.items() if key != "cancel"}
+            return {key: j[key] for key in ("state", "progress", "result", "error")}
 
     def _worker(self):
         while True:
@@ -138,7 +161,7 @@ class Previewer:
             except clips.Cancelled:
                 with self._cv:
                     if self._jobs.get(k) is j:
-                        self._jobs.pop(k)                   # asked for again later -> starts over
+                        self._jobs.pop(k)               # asked for again later -> starts over
             except Exception as e:  # noqa: BLE001 - shown on the page, printed here
                 traceback.print_exc()
                 with self._cv:
@@ -158,6 +181,7 @@ class Studio:
         self._rig = {"free": None, "holder": "", "checked": None}
         self.check_rig()
         self.log("Studio started" + ("" if self.hardware else " in preview-only mode (DLP_NO_HARDWARE is set)"))
+        self.log(f"Duty curve: {clips.duty_lut()[2]}")
 
     # ---------------------------------------------------------------- called from HTTP threads
     def log(self, msg):
@@ -166,12 +190,19 @@ class Studio:
         print(f"[studio] {msg}", flush=True)
 
     def check_rig(self):
-        if not self.hardware:                            # preview only: leave the shared lock file alone
-            return dict(self._rig)
+        """Probe the shared lock for the status display. Never in preview-only mode (the lock file is left alone)
+        and never while a job runs (the job holds or is about to take the lock; the main thread probes itself)."""
+        with self._lock:
+            if not self.hardware or self._job is not None:
+                return dict(self._rig)
+        self._probe()
+        return dict(self._rig)
+
+    def _probe(self):
         free, holder = probe()
         with self._lock:
             self._rig = {"free": free, "holder": holder, "checked": time.strftime("%H:%M:%S")}
-        return dict(self._rig)
+        return free, holder
 
     def snapshot(self) -> dict:
         with self._lock:
@@ -191,9 +222,12 @@ class Studio:
         if len(items) > MAX_PLAYLIST_ITEMS:
             raise Refused(f"at most {MAX_PLAYLIST_ITEMS} scenes in a playlist", 400)
         out = []
-        for it in items:
-            s = self._settings(it)
-            out.append(Item("scene", self._title(s), _seconds(it, *clips.LIMITS["seconds"], 20.0), s))
+        for n, it in enumerate(items, 1):
+            try:
+                s = self._settings(it)
+                out.append(Item("scene", self._title(s), _seconds(it, *clips.LIMITS["seconds"], 20.0), s))
+            except Refused as e:
+                raise Refused(f"playlist item {n}: {e}", 400) from None
         if sum(i.seconds for i in out) > MAX_PLAYLIST_S:
             raise Refused(f"a playlist may run at most {MAX_PLAYLIST_S / 60:g} minutes", 400)
         return self._submit(Job("playlist", out))
@@ -203,7 +237,8 @@ class Studio:
         return self._submit(Job("grid", [Item("grid", "Numbered grid (case check)", sec)]))
 
     def stop(self) -> dict:
-        """Stop whatever runs: this studio's job, and (through the STOP file) any player started from this repo."""
+        """Stop whatever runs: this studio's whole job, and (through the STOP file) any player started from this
+        repository folder."""
         with self._lock:
             job = self._job
         if job is not None:
@@ -212,7 +247,7 @@ class Studio:
             config.STOP.touch()
         except OSError as e:
             self.log(f"could not create the STOP file: {e}")
-        self.log("STOP pressed")
+        self.log("STOP pressed" if job is not None else "STOP pressed (nothing playing here)")
         return {"stopping": job is not None}
 
     def _settings(self, d) -> clips.Settings:
@@ -257,19 +292,33 @@ class Studio:
                 self._state["now"] = {**(self._state["now"] or {}), **now}
 
     def _finish(self, job, last):
+        if job.stopped_by and "message" not in last:
+            last = {**last, "message": f"Stopped by the {job.stopped_by}."}
         with self._lock:
             self._state.update(activity="idle", now=None, last={**last, "t": time.strftime("%H:%M:%S")})
+            self._rig = {"free": None, "holder": "", "checked": None}     # unknown until the page asks again
             self._job = None
-        self.check_rig()
+
+    def _should_stop(self, job, between_items=False) -> bool:
+        if job.cancel.is_set():
+            return True
+        if volplay.stop_requested_since(job.created):
+            job.stopped_by = "STOP file"
+        elif between_items and _fresh(config.STOPALL, job.created):
+            job.stopped_by = "STOPALL file"
+        else:
+            return False
+        job.cancel.set()
+        return True
 
     def _run(self, job: Job):
         results = []
         try:
-            free, holder = probe()
+            free, holder = self._probe()                 # main thread: never races our own Bench
             if not free:
                 raise RigBusy(f"the camera + DMD are in use by another program ({holder}).")
             for n, item in enumerate(job.items, 1):
-                if job.cancel.is_set() or (n > 1 and config.STOPALL.exists()):
+                if self._should_stop(job, between_items=n > 1):
                     break
                 self._set("preparing", title=item.title, index=n, count=len(job.items), seconds=item.seconds,
                           render=0.0, elapsed=0.0, shown=0, dropped=0)
@@ -278,6 +327,8 @@ class Studio:
                 else:
                     frames = self._clip(item, job)
                     fps = frames.fps
+                if self._should_stop(job):
+                    break
                 self._set("holding" if item.kind == "grid" else "playing", fps=round(fps, 1))
                 self.log(f"playing {item.title} for {item.seconds:g} s")
 
@@ -285,18 +336,24 @@ class Studio:
                     if job.cancel.is_set():
                         raise clips.Cancelled()
                     self._set(shown=shown, dropped=dropped, elapsed=round(elapsed, 1))
-                res = volplay.play(frames, fps, item.seconds, progress=progress)
+                res = volplay.play(frames, fps, item.seconds, progress=progress, stop_since=job.created)
                 results.append({"title": item.title, **res})
                 self.log(f"done {item.title}: {res['achieved_fps']} fps, {res['dropped']} late frames")
+                if res.get("stopped"):
+                    job.stopped_by = job.stopped_by or "STOP file"
+                    job.cancel.set()
+                    break
             stopped = job.cancel.is_set()
             self._finish(job, {"status": "stopped" if stopped else "done", "results": results})
             if stopped:
-                self.log("stopped")
+                self.log("stopped" + (f" ({job.stopped_by})" if job.stopped_by else ""))
         except clips.Cancelled:
             self._finish(job, {"status": "stopped", "results": results})
-            self.log("stopped")
+            self.log("stopped" + (f" ({job.stopped_by})" if job.stopped_by else ""))
         except RigBusy as e:
             self._finish(job, {"status": "busy", "message": str(e), "results": results})
+            with self._lock:
+                self._rig = {"free": False, "holder": str(e), "checked": time.strftime("%H:%M:%S")}
             self.log(f"rig busy: {e}")
         except SafetyError as e:
             self._finish(job, {"status": "refused", "message": str(e), "results": results})
@@ -317,6 +374,8 @@ class Studio:
             return clip
 
         def progress(i, n):
+            if self._should_stop(job):
+                raise clips.Cancelled()
             self._set(render=round(i / n, 3))
         clip = clips.render_clip(item.settings, item.seconds, cancel=job.cancel, progress=progress)
         self._clips[key] = clip
