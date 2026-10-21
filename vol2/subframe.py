@@ -115,15 +115,15 @@ def preview(scene, frame=0, mode="ab", L=30.0, where=(40.0, 40.0), save=True):
     count. The measured duty curve (dead zone below ~48, ~(v/255)^2.6) belongs to 8-bit video LEVELS in video
     mode; it is NOT applied to 1-bit slot counts. Each side is relative to its own full on (24 slots, level 255):
     how bright pattern mode is against video mode (blue lit in every slot) is not modelled.
-    Time: slot k samples t = i/60 + k/1440, the 60 Hz frame only t = i/60, so moving content smears across the
-    frame and lags by about half a frame. Reports the mean |diff| over pixels lit on either side, the max |diff|
+    Time: slot k samples t = i/60 + k/1440 and the 60 Hz frame only t = i/60, so moving content smears across
+    the 1440 Hz frame, and the 60 Hz frame lags that frame's average by about half a frame. Reports the mean |diff| over pixels lit on either side, the max |diff|
     and the glow-sum ratio; saves 60 Hz | 1440 Hz | |diff| x4 side by side (columns doubled: the diamond DMD's
     rows sit at half the column pitch) under vol2/out/subframe/preview/."""
     lut = load_duty_lut(BUNDLED / "duty_roi.json")
     vol = Volume(str(ROOT / "configs" / "case_fit_tank_v4.json"), where=where, mode=mode, L=L)
     i = frame % int(round(_period(scene) * FPS))
     eye = np.mean(unpack(pack(subframes(vol, scene_fn(vol, scene), i)), SUB), axis=0) / 255.0
-    lv = render_clip(vol, scene, FPS, (i + 1) / FPS, lut)[0][i][..., 0]
+    lv = vol.frame(scene_fn(vol, scene)(i / FPS), lut)[0][..., 0]        # = render_clip's frame i, alone
     g60 = np.interp(lv.astype(float), lut[0], lut[1])                 # video level -> relative glow (measured)
     d = eye - g60
     lit = (eye > 0) | (g60 > 0)

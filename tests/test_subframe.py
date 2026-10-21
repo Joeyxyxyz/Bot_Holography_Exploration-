@@ -136,7 +136,7 @@ def test_a_sub_frame_whose_duties_are_all_zero_stays_dark():
     assert not any(s.any() for s in subs)
     with np.errstate(all="raise"):                                        # and no 0 / 0 on the way
         sf.subframes(v, lambda t: [([(100, 100)], 0.0, 0.0)], 0)
-    subs =sf.subframes(v, lambda t: [([(100, 100)], 0.0, 0.0), ([(300, 300)], 0.5, 0.0)], 0)
+    subs = sf.subframes(v, lambda t: [([(100, 100)], 0.0, 0.0), ([(300, 300)], 0.5, 0.0)], 0)
     assert not any(s[100, 100] for s in subs) and all(s[300, 300] for s in subs)
     assert not sf.raster_binary([([(100, 100)], float("nan"), 0.0)], 0.5).any()
 
