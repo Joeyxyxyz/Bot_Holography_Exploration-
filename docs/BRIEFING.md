@@ -331,7 +331,7 @@ All camera images are background-subtracted (black frame), cropped, and display-
 7. **Run the 1440 Hz video-port pattern mode** (Joey's GUI step) and compare with 60 Hz.
 8. **Round cross-sections:** face A's light reflected off the bare back wall is ~perpendicular to face B (panel model), at the cost of extra crossings.
 9. **True voxels:** a moving screen (Geng-style helix) in air, or a two-step dye.
-10. **Coherent holography:** LED + pinhole + collimator onto the bare DMD, if Joey wants the build. Designs are in `holo/`.
+10. **Coherent holography:** LED + pinhole + collimator onto the bare DMD, if Joey wants the build. Designs are in `holo/`; the light-vs-depth trade is in `holo/coherent_build.py` (`data/results/hologram_coherent_build.json`, simulation and arithmetic only).
 
 ---
 
