@@ -182,7 +182,7 @@ class Studio:
         self._state = {"activity": "idle", "now": None, "last": None}
         self._rig = {"free": None, "holder": "", "checked": None}
         self._probe_lock = threading.Lock()    # probes and job registration never overlap (no self-inflicted busy)
-        self._own_stop = None                  # (mtime, time) of the STOP file this studio last created
+        self._own_stop = None                  # (mtime, id of the job running then or None) of our last STOP file
         self.check_rig()
         self.log("Studio started" + ("" if self.hardware else " in preview-only mode (DLP_NO_HARDWARE is set)"))
         self.log(f"Duty curve: {clips.duty_lut()[2]}")
@@ -256,7 +256,7 @@ class Studio:
             config.STOP.touch()
             mtime = config.STOP.stat().st_mtime
             with self._lock:
-                self._own_stop = (mtime, time.time())
+                self._own_stop = (mtime, job.id if job is not None else None)
         except OSError as e:
             self.log(f"could not create the STOP file: {e}")
         self.log(("page closed: stopping its job" if only else "STOP pressed") if job is not None
@@ -264,11 +264,13 @@ class Studio:
         return {"stopping": job is not None}
 
     def _clear_own_stale_stop(self, job):
-        """A STOP file this studio created before `job` was submitted (STOP pressed while idle, or a job stopped
-        before its player ran) is ours and stale: remove it so it cannot stop the new job."""
+        """A STOP file this studio created while `job` was not running (STOP pressed while idle, or meant for an
+        earlier job that ended before its player ran) is ours and stale: remove it so it cannot stop the new job.
+        Decided by job id, not by clock (time.time() ticks only every ~16 ms on Windows with Python < 3.13). A STOP
+        pressed while `job` was already registered set its cancel flag anyway, so the file is not needed for it."""
         with self._lock:
             own = self._own_stop
-        if own is None or own[1] >= job.created:
+        if own is None or own[1] == job.id:
             return
         try:
             if config.STOP.stat().st_mtime == own[0]:

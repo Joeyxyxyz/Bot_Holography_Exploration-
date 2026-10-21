@@ -539,3 +539,16 @@ def test_a_closing_page_stops_only_its_own_job(live):
     assert live.snapshot()["activity"] == "playing"           # untouched by another page closing
     assert live.stop({"job": r["job"]}) == {"stopping": True}
     assert wait_idle(live)["last"]["status"] == "stopped"
+
+
+def test_own_stale_stop_is_recognised_without_the_clock(live):
+    """Same-tick STOP then Play (coarse Windows clock): ours and stale by job id, whatever the timestamps say."""
+    live.stop()                                               # nothing running: recorded with no job id
+    later = engine.Job("play", [], created=0.0)               # even a job that looks "older" than the STOP
+    live._clear_own_stale_stop(later)
+    assert not config.STOP.exists()
+    live.submit_play({"scene": "plane_flat", "seconds": 10})
+    job_id = live.snapshot()["job"]
+    live.stop()                                               # meant for the running job: kept for its player
+    assert config.STOP.exists() and live._own_stop[1] == job_id
+    assert wait_idle(live)["last"]["status"] == "stopped"
