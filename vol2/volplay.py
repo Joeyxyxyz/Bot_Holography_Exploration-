@@ -11,9 +11,9 @@ window loop measured 225 pushes/s, so the DMD's 60 Hz is the limit). Late frames
 the achieved rate and drops are reported. STOP file ends playback at once. Rig lock held while playing.
 Modes: "ab" = bands from face A and face B (strongest volume); "b" = face B only (face A stays a clean
 output window, shape extruded along B).
-Case position: the case file (--case-json, default configs/case_fit_tank_v4.json) holds the fitted model AND the
-DMD column windows the DMD-space scenes light ("scene_windows"). A moved case needs a re-map and a new case
-file, not a code edit.
+Case position: the case file (--case-json, default configs/case_fit_tank_v4.json) holds the fitted model AND, in
+"scene_windows", the DMD column windows the DMD-space scenes light and the warp-map row cutoff of the fwc_*. A
+moved case needs a re-map and a new case file, not a code edit.
 
   python -m vol2.volplay <scene> [--fps 60] [--seconds 20] [--mode ab|b] [--L 30] [--case-json <file>] [--dry]
   scenes: ball_bounce, ball_pulse, tower_twist, layer_scan, orbit (solids, pose-fit dependent)
@@ -100,6 +100,15 @@ class Volume:
         if not 0 <= c0 < c1 < W:
             raise ValueError(f"scene_windows.{key} = {self.windows[key]}: need 0 <= first < last < {W}")
         return c0, c1
+
+    def warp_row_max(self):
+        """Last DMD row of the warp map the fwc_* scenes trust: the case file's "scene_windows.warp_row_max", else
+        vol2.warp_scan.ROW_MAX (the 2026-10-05 value), so a case file without windows still plays the fwc_*."""
+        from .warp_scan import ROW_MAX
+        r = int(self.windows.get("warp_row_max", ROW_MAX))
+        if not 0 <= r < H:
+            raise ValueError(f"scene_windows.warp_row_max = {r}: need 0 <= row < {H}")
+        return r
 
     def band(self, fam, centre, y, size, step=0.3, tol=0.8):
         """Mirrors of family fam whose rays pass within +/- size/2 of centre at height y, and the mean
@@ -248,7 +257,8 @@ def scene_fn(vol: Volume, name, size=7.0, height=14.0):
     # ---- DMD-space scenes: designed directly in DMD columns and rows, so they do not depend on the pose fit, but
     # they do depend on where the case sits. Rows span the liquid (the case file's "rows"); columns come from its
     # "scene_windows": the clean face windows (curtains, ocean, plane_*) and the full width (fw_*). The
-    # warp-corrected fwc_* take their columns from the warp map instead, so they need no windows.
+    # warp-corrected fwc_* take their columns from the warp map instead, so they need no windows, only the row
+    # below which the map is not trusted (warp_row_max).
     rows = np.arange(int(vol.case.rows[0]), int(vol.case.rows[1]) + 1)
     winA = winB = FW = None
     if not name.startswith("fwc_"):
@@ -345,7 +355,7 @@ def scene_fn(vol: Volume, name, size=7.0, height=14.0):
     if name.startswith("fwc_"):
         from .warp_scan import clean_map
         maps = sorted(rig_config.RUNS.glob("*_warp_scan/warp_map.npz"))    # newest COMPLETE scan, else bundled
-        X, Y, cs_, rs_, keep = clean_map(maps[-1].parent if maps else BUNDLED / "warp_scan")
+        X, Y, cs_, rs_, keep = clean_map(maps[-1].parent if maps else BUNDLED / "warp_scan", row_max=vol.warp_row_max())
         ccols = [c for j, c in enumerate(cs_) if keep[j] and np.isfinite(Y[:, j]).sum() >= 3]
         fit = {}
         for j, c in enumerate(cs_):

@@ -27,6 +27,9 @@ sys.path.insert(0, str(ROOT))
 H, W = 1140, 912
 COLS = (560, 785)
 ROWS = (860, 1090)
+# clean_map drops map rows below this DMD row (the 2026-10-05 scan: rows 1040-1080, the bottom of the liquid,
+# set by hand [HEURISTIC]). The player takes it from the case file (scene_windows.warp_row_max); this is the default.
+ROW_MAX = 1030
 
 
 def dot(c, r, wc=3, wr=5, level=255):
@@ -132,7 +135,7 @@ def analyse(run: Path):
     return run
 
 
-def clean_map(run: Path, max_jump_px=25.0, row_max=1030):
+def clean_map(run: Path, max_jump_px=25.0, row_max=ROW_MAX):
     """Drop glints and the far-edge jump: keep points whose camera y rises monotonically down each column and
     whose x is continuous with the column's neighbours (median of the column)."""
     w = np.load(run / "warp_map.npz")

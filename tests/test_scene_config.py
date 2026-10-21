@@ -5,8 +5,9 @@ BEFORE the windows moved out of vol2/volplay.py (Volume from configs/case_fit_ta
 bundled duty curve and warp map, no runs/). Matching hashes = byte-identical frames. [PROVED as arithmetic]
 Re-record only for an intended change of a scene's output, from the repo root:
   python tests/test_scene_config.py --record
-Moved case: a case file whose windows and rows are shifted moves the lit columns and rows with them, so a new
-case position needs a new case file, not a code edit. [PROVED as simulation of the DMD frames only]
+Moved case: a case file whose windows and rows are shifted moves the lit columns and rows with them, and its
+warp_row_max bounds the rows of the warp-corrected fwc_* planes, so a new case position needs a new case file, not
+a code edit. [PROVED as simulation of the DMD frames only]
 """
 import hashlib
 import json
@@ -80,6 +81,7 @@ def test_shipped_windows_sit_inside_the_fitted_faces():
     (pa0, pa1), (pb0, pb1) = over["planeA_cols"], over["planeB_cols"]
     assert pa0 <= a0 < a1 <= pa1 < pb0 <= b0 < b1 <= pb1, "clean windows inside the fitted face columns"
     assert f0 <= a0 and b1 <= f1, "the full width spans both faces and the corner"
+    assert over["rows"][0] < w["warp_row_max"] <= over["rows"][1], "the warp-map cutoff lies in the liquid"
 
 
 # The scenes that light scene windows. A moved window or liquid moves each of them as a whole, except where a
@@ -92,15 +94,18 @@ RIGID_ROWS = [s for s in WINDOW_SCENES if s not in ("wave_A", "waves_AB")]
 D_COL, D_ROW = 6, -20
 
 
-def _case_file(tmp, d_col=0, d_row=0, drop_windows=False):
-    """configs/case_fit_tank_v4.json with its scene windows moved d_col columns and its rows d_row rows."""
+def _case_file(tmp, d_col=0, d_row=0, drop_windows=False, warp_row_max=None):
+    """configs/case_fit_tank_v4.json with its scene windows moved d_col columns and its rows d_row rows (the
+    warp-map cutoff belongs to the warp map, which does not move here; warp_row_max sets it)."""
     case = json.loads(CASE_JSON.read_text(encoding="utf-8-sig"))
     case["rows"] = [r + d_row for r in case["rows"]]
     case["scene_windows"] = {k: [c + d_col for c in v] if isinstance(v, list) else v
                              for k, v in case["scene_windows"].items()}
+    if warp_row_max is not None:
+        case["scene_windows"]["warp_row_max"] = warp_row_max
     if drop_windows:
         del case["scene_windows"]
-    p = Path(tmp) / f"case_{d_col}_{d_row}_{int(drop_windows)}.json"
+    p = Path(tmp) / f"case_{d_col}_{d_row}_{int(drop_windows)}_{warp_row_max}.json"
     p.write_text(json.dumps(case, indent=1))
     return p
 
@@ -146,17 +151,44 @@ def test_moved_case_file_moves_the_lit_columns_and_rows(scene, vol, moved_cols, 
             assert np.array_equal(b, np.roll(a, D_ROW, 0)), "the whole frame moves with the liquid"
 
 
-def test_scenes_without_windows_refuse_and_the_rest_still_play(tmp_path, lut):
+def test_scenes_without_windows_refuse_and_the_rest_still_play(tmp_path, vol, lut):
     v = vp.Volume(str(_case_file(tmp_path, drop_windows=True)))
     for s in ("ribbon", "wave_A", "ocean", "plane_flat", "fw_static"):
         with pytest.raises(ValueError, match="scene_windows"):
             vp.scene_fn(v, s)
     for s in ("sphere_round", "fwc_static"):                 # pose-fit solids and warp-map planes need no windows
         assert v.frame(vp.scene_fn(v, s)(0.0), lut)[0].any()
-    v.windows = {"clean_A": [643, 588], "full_width": [560, 912]}
+    # without the field the fwc_* fall back to warp_scan.ROW_MAX, the shipped cutoff: the same frames
+    assert v.warp_row_max() == vol.warp_row_max() == 1030
+    assert np.array_equal(v.frame(vp.scene_fn(v, "fwc_split")(1.5), lut)[0],
+                          vol.frame(vp.scene_fn(vol, "fwc_split")(1.5), lut)[0])
+    v.windows = {"clean_A": [643, 588], "full_width": [560, 912], "warp_row_max": vp.H}
     for k in ("clean_A", "full_width"):
         with pytest.raises(ValueError, match=k):
             v.window(k)
+    with pytest.raises(ValueError, match="warp_row_max"):
+        v.warp_row_max()
+
+
+FWC_SCENES = sorted(s for s in vp.SCENES if s.startswith("fwc_"))
+# a cutoff above the shipped 1030 that still keeps the map row nearest the liquid's mid row (the fwc_* level)
+ROW_CUT = 990
+
+
+def test_case_file_warp_row_max_bounds_the_fwc_planes(tmp_path, vol, lut):
+    """scene_windows.warp_row_max reaches warp_scan.clean_map: the map rows below it are dropped, so no
+    warp-corrected plane centre lies below it and no lit row below it + 4 (thickest band 10 rows: centre - 5 ..
+    centre + 4). With the shipped 1030 some planes do reach lower, so the cutoff is not a no-op."""
+    cut = vp.Volume(str(_case_file(tmp_path, warp_row_max=ROW_CUT)))
+    assert cut.warp_row_max() == ROW_CUT
+    phases = (0.0, 0.25, 0.5, 0.75)
+    deepest = 0
+    for s in FWC_SCENES:
+        lit_cut = np.concatenate([_lit(f, 1) for f in _frames(cut, s, lut, phases)])
+        assert len(lit_cut), f"{s}: lights nothing with the lower cutoff"
+        assert lit_cut.max() <= ROW_CUT + 4, f"{s}: a plane reaches below warp_row_max"
+        deepest = max(deepest, max(_lit(f, 1).max(initial=0) for f in _frames(vol, s, lut, phases)))
+    assert deepest > ROW_CUT + 4
 
 
 def test_subframe_build_follows_the_case_file(tmp_path, monkeypatch):
