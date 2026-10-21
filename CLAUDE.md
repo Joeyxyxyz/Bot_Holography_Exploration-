@@ -9,7 +9,8 @@ Read `README.md`, `SAFETY.md` and `docs/BRIEFING.md` before changing anything. `
   - `vol2.calib_* capture` / `duty` / `rate`, `vol2.warp_scan capture`, `vol2.warp_test`, `vol2.plane_*`, `vol2.oneface_edges`, `vol2.twoface_map`;
   - `vol2.subframe play`;
   - `tools/play_loop.py`, `tools/shoot_*.py`, `tools/demo_planes.ps1`;
-  - `holo/holo_show.py`.
+  - `holo/holo_show.py`;
+  - `python -m studio` (Holo Studio) unless `DLP_NO_HARDWARE=1` is set. With it set, the studio is preview-only, and you may run it to check the page; never press or call Play without it.
 - Set `DLP_NO_HARDWARE=1` in your shell. The tests and CI set it already.
 - If a change needs a bench check, write the exact command for Joey under a **"Bench check (Joey)"** heading in the PR description. Don't run it yourself.
 - **Physical steps, projector GUI, firmware and flash, and LED currents are Joey's.** Code never sends USB/HID to the projector and never changes LED currents.

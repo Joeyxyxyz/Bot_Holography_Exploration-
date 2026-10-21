@@ -26,6 +26,19 @@ This code drives a real projector and camera on a bench with a liquid-filled cas
 
 The static checks are a tripwire for ordinary code, not a sandbox: deliberately obfuscated code could get past them. That is why changes to `rig/` and to these tests need review (below).
 
+## Holo Studio
+
+`python -m studio` is a local web page that plays scenes. It adds no new way to reach the hardware.
+
+| Rule | How it is enforced | Checked by |
+|---|---|---|
+| **Same path to the hardware as the command-line player.** | Play, playlists and the grid all call `vol2.volplay.play()`, which opens `rig.bench.Bench`. The studio code itself holds no window, camera or lock. | `test_static_safety.py` (it scans `studio/` too); `test_studio.py` (a fake rig: plays, blanks, releases) |
+| **One job at a time; never break someone else's lock.** | A second Play is refused until the first ends. Before every job the studio probes the rig lock. The probe locks and unlocks at once, writes nothing, and never creates the lock file. If another program holds the lock, the page shows that program and the job does not start. | `test_studio.py` (busy rig is reported and stays the other program's) |
+| **Stop works at once.** | STOP, Esc and Ctrl+C all end the job. The STOP button sets the job's cancel flag, which the player checks about 4× a second, and also touches the repo `STOP` file, which every player from this repo watches. Ctrl+C in the console reaches the player too, because playback runs on the main thread. | `test_studio.py` (stop ends playback in under 2 s, the DMD is blanked, the lock is released) |
+| **Bounded sessions.** | A single play or the grid lasts at most 10 min. A playlist holds at most 20 scenes and 30 min. Inputs are validated: scene names come only from the scene list, and every number has a fixed range. | `test_studio.py` |
+| **Only you can drive it.** | The page is served only on `127.0.0.1`, and a second studio cannot share the port. Every request must use the host name `127.0.0.1` or `localhost`, which blocks DNS-rebinding pages. Every API call needs the token the page carries for this launch. Changes must be JSON sent from the page's own origin. The page cannot be framed, and it loads only its own scripts. | `test_studio.py` |
+| **Preview-only without hardware.** | With `DLP_NO_HARDWARE=1` the studio refuses Play, the playlist and the grid, and never probes the real lock. Previews and simulations still work. | `test_studio.py` |
+
 ## Rules for people
 
 - **Physical steps are Joey's:** moving or filling the case, aiming or focusing, cabling, the camera lens, and power.

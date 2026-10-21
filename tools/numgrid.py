@@ -6,6 +6,9 @@ labelled "<col><row>" (e.g. 7C). Cells 28 DMD cols x 49 rows (~10 mm at the case
 Text is drawn 2x tall: the diamond DMD's rows are half-pitch, so it lands roughly square.
 
   python tools/numgrid.py          -> runs/<ts>_numgrid/dmd_numgrid.png (then hold it with holo/holo_show.py)
+  python tools/numgrid.py --wide   -> the 2026-10-05 layout (col 1 at DMD 376, row A at 477), the one the
+                                      current case map uses (configs/case_map_tank_v2.json); Holo Studio's
+                                      "Check the case" holds this one
 """
 import sys
 from pathlib import Path
@@ -20,12 +23,13 @@ from rig import bench as vm
 
 C_START, CELL_C, NC = 432, 28, 11
 R_START, CELL_R, NR = 575, 49, 10
+WIDE = {"c_start": 376, "r_start": 477, "nc": 16, "nr": 13}      # 2026-10-05: case in cells 7-14 x E-M
 
 
-def numgrid():
+def numgrid(c_start=C_START, r_start=R_START, nc=NC, nr=NR):
     img = np.zeros((vm.H, vm.W), np.uint8)
-    xs = [C_START + i * CELL_C for i in range(NC + 1)]
-    ys = [R_START + j * CELL_R for j in range(NR + 1)]
+    xs = [c_start + i * CELL_C for i in range(nc + 1)]
+    ys = [r_start + j * CELL_R for j in range(nr + 1)]
     for x in xs:
         img[ys[0]:ys[-1] + 1, x:x + 2] = 255
     for y in ys:
@@ -42,14 +46,15 @@ def numgrid():
 
 
 def main():
-    img, xs, ys = numgrid()
-    run = vm.OUT / (dt.datetime.now().strftime("%Y%m%dT%H%M%S") + "_numgrid")
+    wide = "--wide" in sys.argv[1:]
+    img, xs, ys = numgrid(**WIDE) if wide else numgrid()
+    run = vm.OUT / (dt.datetime.now().strftime("%Y%m%dT%H%M%S") + ("_numgrid_wide" if wide else "_numgrid"))
     run.mkdir(parents=True)
     cv2.imwrite(str(run / "dmd_numgrid.png"), img)
     (run / "meta.json").write_text(json.dumps(
         {"col_edges_dmd": xs, "row_edges_dmd": ys,
          "cells": {f"{i + 1}{chr(65 + j)}": {"cols": [xs[i], xs[i + 1]], "rows": [ys[j], ys[j + 1]]}
-                   for i in range(NC) for j in range(NR)}}, indent=1))
+                   for i in range(len(xs) - 1) for j in range(len(ys) - 1)}}, indent=1))
     print(run / "dmd_numgrid.png")
 
 

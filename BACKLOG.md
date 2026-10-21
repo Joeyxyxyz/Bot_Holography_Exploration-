@@ -37,6 +37,13 @@
 11. **Code health.**
     - Add a ruff lint step to CI and type hints on the public functions in `vol2/`.
     - Write a short `docs/ARCHITECTURE.md` for the ray model.
+12. **Holo Studio: "make your own".**
+    - Add a panel where people shape a scene themselves:
+      - ribbon turns, speed and count;
+      - plane height, thickness and motion;
+      - ball size and motion.
+    - Build it from parametric versions of the existing scene families in `vol2/volplay.py`. Keep the current scene names and output byte-identical (golden test).
+    - Save and load named playlists.
 
 ## Bench (Joey runs; prepare the commands)
 
@@ -49,3 +56,6 @@
 - **Stereo capture** from two camera positions, to record 3D form. Capture the ribbon-only scenes, which have no images yet.
 - **1440 Hz video-port pattern mode.** The GUI mode switch is Joey's. Compare it with 60 Hz.
 - **Re-run the duty calibration** (`python -m vol2.calib_duty duty`) after any LED, fill or dye change.
+- **First live run of Holo Studio:**
+  - Set the DMD display to a plain black desktop, then run `python -m studio`.
+  - Play `Thick plane` for 10 s, press STOP partway through, then check that the scanner can take the rig right away.
