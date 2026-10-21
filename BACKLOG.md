@@ -30,8 +30,9 @@
    - Today's correction holds for one camera position only.
    - Model the rounded-edge lensing so that a correction can be predicted for another viewpoint.
 9. **Holography simulation (still simulation only).**
-   - Done 2026-10-21 as a design study: `holo/coherent_build.py`, report `data/results/hologram_coherent_build.json`. It joins the T3 light budget and the LED coherence sims; its depth verdict agrees with all 7 `led_study.py` sims.
-   - Open: the "separates" threshold (R < 0.5) is uncalibrated. Run `fresnel_cube.py` + `led_study.py` at a 22–37 µm pinhole to set it.
+   - Done 2026-10-21 as a design study: `holo/coherent_build.py`, report `data/results/hologram_coherent_build.json`. It joins the T3 light budget and the LED coherence sims.
+   - Its depth thresholds are fitted to 24 `led_study.py` simulations, including a 15–150 µm pinhole sweep (`data/results/hologram_led_study_small_pinholes.json`); all agree.
+   - Open (bench, if Joey wants the build): the model is untested against real optics.
 10. **STOP for capture sessions.**
     - Today only the players and holds watch `STOP`. Make `Bench.shoot` raise a clean "stopped" exception when `STOP` exists, so any rig session can be ended the same way, and update SAFETY.md.
 11. **Code health.**

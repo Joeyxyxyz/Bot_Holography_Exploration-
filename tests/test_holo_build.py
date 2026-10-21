@@ -24,7 +24,7 @@ def test_power_matches_prep_t3():
 
 def test_verdicts_match_led_study_sims():
     chk = cb.sim_check()
-    assert len(chk) == 7 and all(v["agree"] for v in chk.values()), chk
+    assert len(chk) == 24 and all(v["agree"] for v in chk.values()), chk
 
 
 def test_light_and_blur_depend_only_on_theta():

@@ -22,8 +22,8 @@
    0.42
   ],
   "R_thresholds": [
-   0.5,
-   2.0
+   0.65,
+   1.6
   ],
   "illum_deg": 24.0
  },
@@ -49,52 +49,171 @@
   "transverse_coherence_mm": null
  },
  "sim_check": {
-  "laser_532": {
+  "hologram_led_study:laser_532": {
    "sim_diag_minus_offdiag": 0.238,
    "sim_verdict": "separates",
    "model_R": 0.0,
    "model_verdict": "separates",
    "agree": true
   },
-  "led_30nm_pin75um": {
+  "hologram_led_study:led_30nm_pin75um": {
    "sim_diag_minus_offdiag": 0.057,
    "sim_verdict": "partial",
    "model_R": 1.567,
    "model_verdict": "partial",
    "agree": true
   },
-  "led_10nm_pin75um": {
+  "hologram_led_study:led_10nm_pin75um": {
    "sim_diag_minus_offdiag": 0.074,
    "sim_verdict": "partial",
    "model_R": 1.057,
    "model_verdict": "partial",
    "agree": true
   },
-  "led_3nm_pin75um": {
+  "hologram_led_study:led_3nm_pin75um": {
    "sim_diag_minus_offdiag": 0.076,
    "sim_verdict": "partial",
    "model_R": 0.982,
    "model_verdict": "partial",
    "agree": true
   },
-  "led_10nm_pin200um": {
+  "hologram_led_study:led_10nm_pin200um": {
    "sim_diag_minus_offdiag": 0.009,
    "sim_verdict": "none",
    "model_R": 2.631,
    "model_verdict": "none",
    "agree": true
   },
-  "led_10nm_pin500um": {
+  "hologram_led_study:led_10nm_pin500um": {
    "sim_diag_minus_offdiag": 0.012,
    "sim_verdict": "none",
    "model_R": 6.511,
    "model_verdict": "none",
    "agree": true
   },
-  "led_10nm_bare_die_1mm": {
+  "hologram_led_study:led_10nm_bare_die_1mm": {
    "sim_diag_minus_offdiag": 0.007,
    "sim_verdict": "none",
    "model_R": 13.002,
+   "model_verdict": "none",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:laser_532": {
+   "sim_diag_minus_offdiag": 0.238,
+   "sim_verdict": "separates",
+   "model_R": 0.0,
+   "model_verdict": "separates",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_10nm_pin15um": {
+   "sim_diag_minus_offdiag": 0.216,
+   "sim_verdict": "separates",
+   "model_R": 0.453,
+   "model_verdict": "separates",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_10nm_pin22um": {
+   "sim_diag_minus_offdiag": 0.216,
+   "sim_verdict": "separates",
+   "model_R": 0.499,
+   "model_verdict": "separates",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_10nm_pin30um": {
+   "sim_diag_minus_offdiag": 0.182,
+   "sim_verdict": "separates",
+   "model_R": 0.565,
+   "model_verdict": "separates",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_10nm_pin37um": {
+   "sim_diag_minus_offdiag": 0.159,
+   "sim_verdict": "separates",
+   "model_R": 0.631,
+   "model_verdict": "separates",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_10nm_pin50um": {
+   "sim_diag_minus_offdiag": 0.128,
+   "sim_verdict": "partial",
+   "model_R": 0.768,
+   "model_verdict": "partial",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_10nm_pin75um": {
+   "sim_diag_minus_offdiag": 0.074,
+   "sim_verdict": "partial",
+   "model_R": 1.057,
+   "model_verdict": "partial",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_10nm_pin100um": {
+   "sim_diag_minus_offdiag": 0.042,
+   "sim_verdict": "partial",
+   "model_R": 1.362,
+   "model_verdict": "partial",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_10nm_pin150um": {
+   "sim_diag_minus_offdiag": 0.009,
+   "sim_verdict": "none",
+   "model_R": 1.992,
+   "model_verdict": "none",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_3nm_pin15um": {
+   "sim_diag_minus_offdiag": 0.238,
+   "sim_verdict": "separates",
+   "model_R": 0.23,
+   "model_verdict": "separates",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_3nm_pin22um": {
+   "sim_diag_minus_offdiag": 0.238,
+   "sim_verdict": "separates",
+   "model_R": 0.311,
+   "model_verdict": "separates",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_3nm_pin30um": {
+   "sim_diag_minus_offdiag": 0.201,
+   "sim_verdict": "separates",
+   "model_R": 0.409,
+   "model_verdict": "separates",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_3nm_pin37um": {
+   "sim_diag_minus_offdiag": 0.176,
+   "sim_verdict": "separates",
+   "model_R": 0.496,
+   "model_verdict": "separates",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_3nm_pin50um": {
+   "sim_diag_minus_offdiag": 0.137,
+   "sim_verdict": "partial",
+   "model_R": 0.661,
+   "model_verdict": "partial",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_3nm_pin75um": {
+   "sim_diag_minus_offdiag": 0.076,
+   "sim_verdict": "partial",
+   "model_R": 0.982,
+   "model_verdict": "partial",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_3nm_pin100um": {
+   "sim_diag_minus_offdiag": 0.044,
+   "sim_verdict": "partial",
+   "model_R": 1.305,
+   "model_verdict": "partial",
+   "agree": true
+  },
+  "hologram_led_study_small_pinholes:led_3nm_pin150um": {
+   "sim_diag_minus_offdiag": 0.005,
+   "sim_verdict": "none",
+   "model_R": 1.953,
    "model_verdict": "none",
    "agree": true
   }
@@ -102,87 +221,87 @@
  "frontier_f100": [
   {
    "target": "separates",
-   "pinhole_mm": 0.0369,
+   "pinhole_mm": 0.0486,
    "collimator_f_mm": 100.0,
    "filter_fwhm_nm": 3.0,
-   "theta_mrad": 0.1845,
-   "throughput_vs_bare_led": 0.000136,
-   "P_at_dmd_uW": 0.05,
-   "P_in_image_nW": 1.88,
-   "smear_spatial_mm": 0.0738,
+   "theta_mrad": 0.243,
+   "throughput_vs_bare_led": 0.000236,
+   "P_at_dmd_uW": 0.086,
+   "P_in_image_nW": 3.26,
+   "smear_spatial_mm": 0.0972,
    "smear_spectral_x_mm": 0.0189,
    "axial_smear_mm": 0.96,
    "defocus_blur_mm": 0.1539,
-   "depth_ratio_R": 0.495,
+   "depth_ratio_R": 0.643,
    "verdict": "separates",
-   "card_luminance_cd_m2": 0.0295,
+   "card_luminance_cd_m2": 0.0394,
    "visible_dark_room": true,
    "comfortable": false,
    "collimator_ok": true,
-   "transverse_coherence_mm": 1.442
+   "transverse_coherence_mm": 1.095
   },
   {
    "target": "partial",
-   "pinhole_mm": 0.1521,
+   "pinhole_mm": 0.1215,
    "collimator_f_mm": 100.0,
    "filter_fwhm_nm": 3.0,
-   "theta_mrad": 0.7605,
-   "throughput_vs_bare_led": 0.002313,
-   "P_at_dmd_uW": 0.842,
-   "P_in_image_nW": 31.93,
-   "smear_spatial_mm": 0.3042,
+   "theta_mrad": 0.6075,
+   "throughput_vs_bare_led": 0.001476,
+   "P_at_dmd_uW": 0.537,
+   "P_in_image_nW": 20.37,
+   "smear_spatial_mm": 0.243,
    "smear_spectral_x_mm": 0.0189,
    "axial_smear_mm": 0.96,
    "defocus_blur_mm": 0.1539,
-   "depth_ratio_R": 1.98,
+   "depth_ratio_R": 1.584,
    "verdict": "partial",
-   "card_luminance_cd_m2": 0.1253,
+   "card_luminance_cd_m2": 0.1,
    "visible_dark_room": true,
    "comfortable": false,
    "collimator_ok": true,
-   "transverse_coherence_mm": 0.35
+   "transverse_coherence_mm": 0.438
   },
   {
    "target": "separates",
-   "pinhole_mm": 0.0215,
+   "pinhole_mm": 0.0382,
    "collimator_f_mm": 100.0,
    "filter_fwhm_nm": 10.0,
-   "theta_mrad": 0.1075,
-   "throughput_vs_bare_led": 0.000154,
-   "P_at_dmd_uW": 0.056,
-   "P_in_image_nW": 2.13,
-   "smear_spatial_mm": 0.043,
+   "theta_mrad": 0.191,
+   "throughput_vs_bare_led": 0.000486,
+   "P_at_dmd_uW": 0.177,
+   "P_in_image_nW": 6.71,
+   "smear_spatial_mm": 0.0764,
    "smear_spectral_x_mm": 0.0629,
    "axial_smear_mm": 3.19,
    "defocus_blur_mm": 0.1539,
-   "depth_ratio_R": 0.495,
+   "depth_ratio_R": 0.643,
    "verdict": "separates",
-   "card_luminance_cd_m2": 0.0334,
+   "card_luminance_cd_m2": 0.0811,
    "visible_dark_room": true,
    "comfortable": false,
    "collimator_ok": true,
-   "transverse_coherence_mm": 2.474
+   "transverse_coherence_mm": 1.393
   },
   {
    "target": "partial",
-   "pinhole_mm": 0.1491,
+   "pinhole_mm": 0.1178,
    "collimator_f_mm": 100.0,
    "filter_fwhm_nm": 10.0,
-   "theta_mrad": 0.7455,
-   "throughput_vs_bare_led": 0.00741,
-   "P_at_dmd_uW": 2.698,
-   "P_in_image_nW": 102.27,
-   "smear_spatial_mm": 0.2982,
+   "theta_mrad": 0.589,
+   "throughput_vs_bare_led": 0.004626,
+   "P_at_dmd_uW": 1.684,
+   "P_in_image_nW": 63.84,
+   "smear_spatial_mm": 0.2356,
    "smear_spectral_x_mm": 0.0629,
    "axial_smear_mm": 3.19,
    "defocus_blur_mm": 0.1539,
-   "depth_ratio_R": 1.98,
+   "depth_ratio_R": 1.585,
    "verdict": "partial",
-   "card_luminance_cd_m2": 0.4013,
+   "card_luminance_cd_m2": 0.313,
    "visible_dark_room": true,
    "comfortable": false,
    "collimator_ok": true,
-   "transverse_coherence_mm": 0.357
+   "transverse_coherence_mm": 0.452
   },
   {
    "filter_fwhm_nm": 30.0,
@@ -192,24 +311,24 @@
   },
   {
    "target": "partial",
-   "pinhole_mm": 0.1196,
+   "pinhole_mm": 0.0771,
    "collimator_f_mm": 100.0,
    "filter_fwhm_nm": 30.0,
-   "theta_mrad": 0.598,
-   "throughput_vs_bare_led": 0.014304,
-   "P_at_dmd_uW": 5.208,
-   "P_in_image_nW": 197.42,
-   "smear_spatial_mm": 0.2392,
+   "theta_mrad": 0.3855,
+   "throughput_vs_bare_led": 0.005944,
+   "P_at_dmd_uW": 2.164,
+   "P_in_image_nW": 82.04,
+   "smear_spatial_mm": 0.1542,
    "smear_spectral_x_mm": 0.1887,
    "axial_smear_mm": 9.58,
    "defocus_blur_mm": 0.1539,
-   "depth_ratio_R": 1.98,
+   "depth_ratio_R": 1.584,
    "verdict": "partial",
-   "card_luminance_cd_m2": 0.7747,
+   "card_luminance_cd_m2": 0.4025,
    "visible_dark_room": true,
    "comfortable": false,
    "collimator_ok": true,
-   "transverse_coherence_mm": 0.445
+   "transverse_coherence_mm": 0.69
   }
  ],
  "grid": [
@@ -326,7 +445,7 @@
    "axial_smear_mm": 9.58,
    "defocus_blur_mm": 0.1539,
    "depth_ratio_R": 1.787,
-   "verdict": "partial",
+   "verdict": "none",
    "card_luminance_cd_m2": 0.6001,
    "visible_dark_room": true,
    "comfortable": false,
@@ -346,7 +465,7 @@
    "axial_smear_mm": 0.96,
    "defocus_blur_mm": 0.1539,
    "depth_ratio_R": 1.953,
-   "verdict": "partial",
+   "verdict": "none",
    "card_luminance_cd_m2": 0.1235,
    "visible_dark_room": true,
    "comfortable": false,
@@ -366,7 +485,7 @@
    "axial_smear_mm": 3.19,
    "defocus_blur_mm": 0.1539,
    "depth_ratio_R": 1.992,
-   "verdict": "partial",
+   "verdict": "none",
    "card_luminance_cd_m2": 0.4038,
    "visible_dark_room": true,
    "comfortable": false,
@@ -546,7 +665,7 @@
    "axial_smear_mm": 3.19,
    "defocus_blur_mm": 0.1539,
    "depth_ratio_R": 0.522,
-   "verdict": "partial",
+   "verdict": "separates",
    "card_luminance_cd_m2": 0.0428,
    "visible_dark_room": true,
    "comfortable": false,
@@ -746,7 +865,7 @@
    "axial_smear_mm": 9.58,
    "defocus_blur_mm": 0.1539,
    "depth_ratio_R": 1.787,
-   "verdict": "partial",
+   "verdict": "none",
    "card_luminance_cd_m2": 0.6001,
    "visible_dark_room": true,
    "comfortable": false,
@@ -906,7 +1025,7 @@
    "axial_smear_mm": 3.19,
    "defocus_blur_mm": 0.1539,
    "depth_ratio_R": 0.522,
-   "verdict": "partial",
+   "verdict": "separates",
    "card_luminance_cd_m2": 0.0428,
    "visible_dark_room": true,
    "comfortable": false,
@@ -946,7 +1065,7 @@
    "axial_smear_mm": 0.96,
    "defocus_blur_mm": 0.1539,
    "depth_ratio_R": 0.503,
-   "verdict": "partial",
+   "verdict": "separates",
    "card_luminance_cd_m2": 0.03,
    "visible_dark_room": true,
    "comfortable": false,
@@ -966,7 +1085,7 @@
    "axial_smear_mm": 3.19,
    "defocus_blur_mm": 0.1539,
    "depth_ratio_R": 0.636,
-   "verdict": "partial",
+   "verdict": "separates",
    "card_luminance_cd_m2": 0.079,
    "visible_dark_room": true,
    "comfortable": false,
@@ -1106,7 +1225,7 @@
    "axial_smear_mm": 9.58,
    "defocus_blur_mm": 0.1539,
    "depth_ratio_R": 1.787,
-   "verdict": "partial",
+   "verdict": "none",
    "card_luminance_cd_m2": 0.6001,
    "visible_dark_room": true,
    "comfortable": false,
@@ -1116,7 +1235,7 @@
  ],
  "notes": [
   "Light and spatial smear both depend only on theta = d/2f: a longer collimator with a proportionally larger pinhole gives the same light and the same blur [PROVED, model].",
-  "The depth cue is the defocus of the other layers, dz * NA = 0.15 mm here. Partial separation needs theta below about 0.6-0.75 mrad (75-150 um at f = 100 mm); clean separation below about 0.1-0.19 mrad (22-37 um), with R_SEP uncalibrated [PROVED, model].",
+  "The depth cue is the defocus of the other layers, dz * NA = 0.15 mm here. With a 10 nm filter at f = 100 mm: clean separation up to about a 37 um pinhole, partial up to about 115 um, none at 150 um and above [PROVED, model fitted to simulation].",
   "For partial separation the unfiltered 30 nm LED is brightest (its wider spectrum outweighs its spectral smear). Clean separation needs a filter of 10 nm or less: at 30 nm the spectral smear alone exceeds the target [PROVED, model].",
   "Card luminance assumes the image focused on a white card; a scattering fill is 10-100x dimmer [HEURISTIC]."
  ]

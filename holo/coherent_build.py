@@ -11,9 +11,12 @@ Model (paraxial, small source behind a collimator of focal length f; the DMD fil
   axial smear         dz_lam = z * sigma_lam / lam             (Fresnel focus ~ 1/lam)
   defocus blur        b = dz_layer * NA_short, NA_short = (ROWS*CELL/2) / z   (the cue that tells layers apart)
   depth ratio         R = sqrt(s_sp^2 + s_sp_x^2) / b    -> R < 0.5 separates, R < 2 partial, else none
-The R thresholds are [HEURISTIC]. R_PARTIAL = 2 sits between the simulated partial (R <= 1.57) and
-none (R >= 2.63) cases, so the verdict matches all 7 led_study.py simulations (tests/test_holo_build.py).
-R_SEP = 0.5 is NOT calibrated: only the laser (R = 0) is a simulated 'separates' case. Power and luminance use prep.py's [HEURISTIC] LED assumptions.
+The R thresholds are fitted to 22 led_study.py simulations [PROVED, simulation; HEURISTIC cut-offs]:
+the 7 in hologram_led_study.json plus a 15-22 to 150 um, 3 and 10 nm sweep (2026-10-21,
+hologram_led_study_small_pinholes.json). Simulated separation = diag - offdiag correlation;
+'separates' > 0.15 (about 2/3 of the laser's 0.238), 'partial' > 0.03. Boundaries: R 0.631-0.661
+and 1.36-1.57. tests/test_holo_build.py checks every simulation agrees.
+Power and luminance use prep.py's [HEURISTIC] LED assumptions.
 Everything else is [PROVED] only as arithmetic of this model; nothing is measured.
 """
 from __future__ import annotations
@@ -41,7 +44,7 @@ A = {"led_optical_W": 0.30, "led_die_mm2": 1.0, "led_fwhm_nm": 30.0, "optics_tra
 # fraction of DMD light in the image window: clip-90 % design, fresnel_cube.py [PROVED, simulation]
 EFF_WINDOW = 0.0446
 LASER_W = 5e-3                   # reference laser, as prep.py
-R_SEP, R_PARTIAL = 0.5, 2.0
+R_SEP, R_PARTIAL = 0.65, 1.6
 DMD_DIAG_MM = math.hypot(9.85, 6.16)
 ILLUM_DEG = 24.0                 # ON-state illumination angle, 2 x 12 deg tilt [ASSERTED, TI DLPC350 docs]
 
@@ -124,19 +127,23 @@ def frontier(f_mm=100.0):
 
 
 def sim_check():
-    """The 7 led_study.py simulations (f = 100 mm) vs this model's verdicts."""
-    rep = json.loads((ROOT / "data/results/hologram_led_study.json").read_text())
-    cases = {"laser_532": (0.0, 0.0), "led_30nm_pin75um": (0.075, 30), "led_10nm_pin75um": (0.075, 10),
-             "led_3nm_pin75um": (0.075, 3), "led_10nm_pin200um": (0.2, 10), "led_10nm_pin500um": (0.5, 10),
-             "led_10nm_bare_die_1mm": (1.0, 10)}
+    """Every led_study.py simulation (f = 100 mm) vs this model's verdict."""
     out = {}
-    for k, (d, fw) in cases.items():
-        c = rep["configs"][k]
-        sep = c["diag_mean"] - c["offdiag_mean"]          # simulated depth separation
-        sim = "separates" if sep > 0.15 else "partial" if sep > 0.03 else "none"
-        m = budget(d, rep["f_col_mm"], fw)
-        out[k] = {"sim_diag_minus_offdiag": round(sep, 3), "sim_verdict": sim,
-                  "model_R": m["depth_ratio_R"], "model_verdict": m["verdict"], "agree": sim == m["verdict"]}
+    for fn in ("hologram_led_study.json", "hologram_led_study_small_pinholes.json"):
+        rep = json.loads((ROOT / "data/results" / fn).read_text())
+        for k, c in rep["configs"].items():
+            if k == "laser_532":
+                d, fw = 0.0, 0.0
+            else:
+                fw = float(k.split("_")[1][:-2])
+                p = k.split("_")[2]
+                d = 1.0 if p == "bare" else int(p[3:-2]) / 1000
+            sep = c["diag_mean"] - c["offdiag_mean"]
+            sim = "separates" if sep > 0.15 else "partial" if sep > 0.03 else "none"
+            m = budget(d, rep["f_col_mm"], fw)
+            out[f"{fn.split('.')[0]}:{k}"] = {"sim_diag_minus_offdiag": round(sep, 3), "sim_verdict": sim,
+                                              "model_R": m["depth_ratio_R"], "model_verdict": m["verdict"],
+                                              "agree": sim == m["verdict"]}
     return out
 
 
@@ -153,9 +160,9 @@ def report():
         "notes": [
             "Light and spatial smear both depend only on theta = d/2f: a longer collimator with a "
             "proportionally larger pinhole gives the same light and the same blur [PROVED, model].",
-            "The depth cue is the defocus of the other layers, dz * NA = 0.15 mm here. Partial "
-            "separation needs theta below about 0.6-0.75 mrad (75-150 um at f = 100 mm); clean "
-            "separation below about 0.1-0.19 mrad (22-37 um), with R_SEP uncalibrated [PROVED, model].",
+            "The depth cue is the defocus of the other layers, dz * NA = 0.15 mm here. With a 10 nm "
+            "filter at f = 100 mm: clean separation up to about a 37 um pinhole, partial up to about "
+            "115 um, none at 150 um and above [PROVED, model fitted to simulation].",
             "For partial separation the unfiltered 30 nm LED is brightest (its wider spectrum outweighs "
             "its spectral smear). Clean separation needs a filter of 10 nm or less: at 30 nm the "
             "spectral smear alone exceeds the target [PROVED, model].",
