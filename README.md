@@ -30,7 +30,7 @@ The full story with every number and caveat is in [docs/BRIEFING.md](docs/BRIEFI
 
 ```bash
 python -m pip install -e ".[dev]"                 # use [dev] OR [bench] per environment, not both
-python -m pytest                                   # ~1-2 min; never touches hardware
+python -m pytest                                   # a few minutes; never touches hardware
 python -m vol2.volplay ribbon --dry --seconds 2    # render a scene; frames go to vol2/out/volplay/
 ```
 

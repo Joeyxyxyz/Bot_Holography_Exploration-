@@ -14,7 +14,7 @@ import cv2
 import numpy as np
 
 from . import simulate
-from .geometry import Case
+from .geometry import Case, load_case_json
 from .render import Plane, joint_box
 from .rods import render_shape
 from .run import N_LIQ, save_views
@@ -23,8 +23,7 @@ OUT = Path(__file__).parent / "out"
 
 
 def build(case_json, fill="glycerin", tag="", beam_mm=1.0):
-    over = json.loads(Path(case_json).read_text(encoding="utf-8-sig"))
-    over = {k: (tuple(v) if isinstance(v, list) else v) for k, v in over.items()}
+    over, _ = load_case_json(case_json)
     case = Case(**{"n_liq": N_LIQ[fill], "back_walls": "tir", **over})
     out = OUT / (f"rods_{fill}" + (f"_{tag}" if tag else ""))
     out.mkdir(parents=True, exist_ok=True)

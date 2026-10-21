@@ -11,8 +11,11 @@ window loop measured 225 pushes/s, so the DMD's 60 Hz is the limit). Late frames
 the achieved rate and drops are reported. STOP file ends playback at once. Rig lock held while playing.
 Modes: "ab" = bands from face A and face B (strongest volume); "b" = face B only (face A stays a clean
 output window, shape extruded along B).
+Case position: the case file (--case-json, default configs/case_fit_tank_v4.json) holds the fitted model AND, in
+"scene_windows", the DMD column windows the DMD-space scenes light and the warp-map row cutoff of the fwc_*. A
+moved case needs a re-map and a new case file, not a code edit.
 
-  python -m vol2.volplay <scene> [--fps 60] [--seconds 20] [--mode ab|b] [--L 30] [--dry]
+  python -m vol2.volplay <scene> [--fps 60] [--seconds 20] [--mode ab|b] [--L 30] [--case-json <file>] [--dry]
   scenes: ball_bounce, ball_pulse, tower_twist, layer_scan, orbit (solids, pose-fit dependent)
           wave_A, waves_AB, ribbon (curtains designed in DMD space: rippling / crossing / twisting light sheets)
 """
@@ -33,13 +36,14 @@ sys.path.insert(0, str(ROOT))
 
 from rig import config as rig_config  # noqa: E402 - paths only, no hardware
 
-from .geometry import Case  # noqa: E402
+from .geometry import Case, load_case_json  # noqa: E402
 from .render import H, W, Plane  # noqa: E402
 from .rods import family_axes  # noqa: E402
 from .run import N_LIQ  # noqa: E402
 from .solid import PROFILES  # noqa: E402
 
 STOP = ROOT / "STOP"
+CASE_JSON = ROOT / "configs" / "case_fit_tank_v4.json"   # the current case position (bench 2026-10-05)
 
 
 # ---------------------------------------------------------------- duty -> blue level
@@ -74,9 +78,9 @@ def duty_to_level(duty, lut):
 # ---------------------------------------------------------------- scene elements
 class Volume:
     def __init__(self, case_json, fill="glycerin", where=(40.0, 40.0), mode="ab", L=30.0):
-        over = json.loads(Path(case_json).read_text(encoding="utf-8-sig"))
-        over = {k: (tuple(v) if isinstance(v, list) else v) for k, v in over.items()}
+        over, extra = load_case_json(case_json)
         self.case = Case(**{"n_liq": N_LIQ[fill], "back_walls": "tir", **over})
+        self.windows = extra.get("scene_windows", {})       # DMD column windows of this case position
         self.planes = {f: Plane(self.case, f) for f in ("A", "B")}
         self.axes = family_axes(self.planes)
         C, self.uA, self.uB = self.case.axes()
@@ -85,6 +89,34 @@ class Volume:
         self.centre[1] = self.mid
         self.fams = ("A", "B") if mode == "ab" else ("B",)
         self.L = L
+
+    def window(self, key):
+        """(first, last) DMD column, inclusive, of scene window `key` in the case file's "scene_windows".
+        Windows belong to one case position, so there is no fallback: without them those scenes refuse."""
+        if key not in self.windows:
+            raise ValueError(f"case file has no scene_windows.{key}: these scenes need the DMD windows measured "
+                             "for this case position (see configs/case_fit_tank_v4.json)")
+        v = self.windows[key]
+        if len(v) != 2 or any(float(c) != int(c) for c in v):
+            raise ValueError(f"scene_windows.{key} = {v}: need two whole DMD columns [first, last]")
+        c0, c1 = (int(c) for c in v)
+        if not 0 <= c0 < c1 < W:
+            raise ValueError(f"scene_windows.{key} = {v}: need 0 <= first < last < {W}")
+        if key in ("clean_A", "clean_B") and {"clean_A", "clean_B"} <= set(self.windows):
+            (a0, a1), (b0, b1) = self.windows["clean_A"], self.windows["clean_B"]
+            if not a1 < b0:
+                raise ValueError(f"scene_windows: clean_A {[a0, a1]} must end before clean_B {[b0, b1]} starts "
+                                 "(face A lies left of the corner, face B right of it)")
+        return c0, c1
+
+    def warp_row_max(self):
+        """Last DMD row of the warp map the fwc_* scenes trust: the case file's "scene_windows.warp_row_max", else
+        vol2.warp_scan.ROW_MAX (the 2026-10-05 value), so a case file without windows still plays the fwc_*."""
+        from .warp_scan import ROW_MAX
+        r = int(self.windows.get("warp_row_max", ROW_MAX))
+        if not 0 <= r < H:
+            raise ValueError(f"scene_windows.warp_row_max = {r}: need 0 <= row < {H}")
+        return r
 
     def band(self, fam, centre, y, size, step=0.3, tol=0.8):
         """Mirrors of family fam whose rays pass within +/- size/2 of centre at height y, and the mean
@@ -230,12 +262,19 @@ def scene_fn(vol: Volume, name, size=7.0, height=14.0):
             off = 3.0 * (np.cos(ph) * vol.uA + np.sin(ph) * vol.uB)
             return vol.solid(PROFILES["ball"], mid - 4, mid + 4, 4.0, offset=off)
         return f
-    # ---- curtains: one column per DMD row = a sheet through the volume (a ruled surface of that face's rays).
-    # Designed directly in DMD space, so they do not depend on the pose fit. Columns stay inside the clean
-    # windows (A <= 645, B >= 695 per case_fit_tank_v4); rows span the liquid.
+    # ---- DMD-space scenes: designed directly in DMD columns and rows, so they do not depend on the pose fit, but
+    # they do depend on where the case sits. Rows span the liquid (the case file's "rows"); columns come from its
+    # "scene_windows": the clean face windows (curtains, ocean, plane_*) and the full width (fw_*). The
+    # warp-corrected fwc_* take their columns from the warp map instead, so they need no windows, only the row
+    # below which the map is not trusted (warp_row_max).
     rows = np.arange(int(vol.case.rows[0]), int(vol.case.rows[1]) + 1)
-    winA, winB = (588, 643), (697, 748)
+    winA = winB = FW = None
+    if not name.startswith("fwc_"):
+        winA, winB = vol.window("clean_A"), vol.window("clean_B")
+        f0, f1 = vol.window("full_width")
+        FW = np.arange(f0, f1 + 1)
 
+    # curtains: one column per DMD row = a sheet through the volume (a ruled surface of that face's rays)
     def curtain(win, phase_cols, width=3):
         c0, c1 = win
         mid_c, amp = (c0 + c1) / 2, (c1 - c0) / 2 - width
@@ -310,9 +349,8 @@ def scene_fn(vol: Volume, name, size=7.0, height=14.0):
         fn_rows = planes_[name]
         return lambda t: plane(t, fn_rows)
 
-    # full-width planes (plane_geom 2026-10-05: blue, every column 560-785 INCLUDING the rounded corner, which
-    # fills the gap between the faces; 12 rows -> 4.3x the clean-window glow, evenness 0.61; white adds glints).
-    FW = np.arange(560, 786)
+    # full-width planes over FW (plane_geom 2026-10-05: blue, every column 560-785 INCLUDING the rounded corner,
+    # which fills the gap between the faces; 12 rows -> 4.3x the clean-window glow, evenness 0.61; white adds glints).
     r_top, r_bot = rows[0] + 10, rows[-1] - 10
 
     def fw(row_of_col, thick=12, duty=1.0):
@@ -325,7 +363,7 @@ def scene_fn(vol: Volume, name, size=7.0, height=14.0):
     if name.startswith("fwc_"):
         from .warp_scan import clean_map
         maps = sorted(rig_config.RUNS.glob("*_warp_scan/warp_map.npz"))    # newest COMPLETE scan, else bundled
-        X, Y, cs_, rs_, keep = clean_map(maps[-1].parent if maps else BUNDLED / "warp_scan")
+        X, Y, cs_, rs_, keep = clean_map(maps[-1].parent if maps else BUNDLED / "warp_scan", row_max=vol.warp_row_max())
         ccols = [c for j, c in enumerate(cs_) if keep[j] and np.isfinite(Y[:, j]).sum() >= 3]
         fit = {}
         for j, c in enumerate(cs_):
@@ -517,7 +555,7 @@ def main():
     ap.add_argument("--seconds", type=float, default=20.0)
     ap.add_argument("--mode", default="ab", choices=["ab", "b"])
     ap.add_argument("--L", type=float, default=30.0)
-    ap.add_argument("--case-json", default=str(ROOT / "configs" / "case_fit_tank_v4.json"))
+    ap.add_argument("--case-json", default=str(CASE_JSON), help="case file: fitted model + scene_windows")
     ap.add_argument("--where", default="40,40")
     ap.add_argument("--dry", action="store_true", help="render and save frames only")
     a = ap.parse_args()

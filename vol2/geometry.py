@@ -27,7 +27,9 @@ focus (review). [HEURISTIC]
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -88,6 +90,18 @@ class Case:
         wc = self._R() @ _cam_dir(self, np.array([self.col_corner]), np.array([self.row_ref]))[0]
         C = self.D * wc
         return C, uA, uB
+
+
+CASE_SECTIONS = ("scene_windows",)   # case-file sections that are not Case fields (scene_windows: vol2.volplay)
+
+
+def load_case_json(path):
+    """configs/case_fit_*.json -> (Case field overrides, lists as tuples; {section: value} for CASE_SECTIONS).
+    One file describes one case position: the fitted model and the DMD windows the scenes light. Any other
+    unknown key still fails in Case(**over), so a misspelt field is never silently ignored."""
+    over = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    extra = {k: over.pop(k) for k in CASE_SECTIONS if k in over}
+    return {k: (tuple(v) if isinstance(v, list) else v) for k, v in over.items()}, extra
 
 
 def _cam_dir(case: Case, c, r):

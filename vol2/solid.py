@@ -20,7 +20,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from .geometry import Case
+from .geometry import Case, load_case_json
 from .render import H, W, Plane, draw
 from .rods import family_axes
 from .run import N_LIQ
@@ -67,8 +67,7 @@ PROFILES = {
 
 
 def build(case_json, where="qab:40,40", size_mm=7.0, fill="glycerin", tag="solid", height_mm=None, n_frames=16):
-    over = json.loads(Path(case_json).read_text(encoding="utf-8-sig"))
-    over = {k: (tuple(v) if isinstance(v, list) else v) for k, v in over.items()}
+    over, _ = load_case_json(case_json)
     case = Case(**{"n_liq": N_LIQ[fill], "back_walls": "tir", **over})
     planes = {f: Plane(case, f) for f in ("A", "B")}
     axes = family_axes(planes)
