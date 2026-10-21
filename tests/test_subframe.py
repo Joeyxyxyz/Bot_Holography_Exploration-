@@ -144,6 +144,14 @@ def test_build_writes_frames_info_and_procedure(out, vol):
     assert "Joey" in txt and "Back to Video Mode" in txt
 
 
+def test_a_shorter_rebuild_leaves_no_stale_frames(out):
+    """`subframe play` loops every frames/f*.png: frames left from a longer build would play as part of the loop."""
+    sf.build("wave_A", seconds=3 / 60)
+    d = sf.build("wave_A", seconds=1 / 60)
+    assert [p.name for p in sorted((d / "frames").glob("f*.png"))] == ["f0000.png"]
+    assert json.loads((d / "info.json").read_text())["hdmi_frames"] == 1
+
+
 def test_plane_check_puts_digit_k_in_slot_k(out):
     d = sf.plane_check()
     assert d == out / "plane_check"

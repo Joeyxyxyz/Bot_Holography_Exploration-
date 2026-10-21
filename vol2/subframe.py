@@ -74,6 +74,8 @@ def build(scene, seconds=None, mode="ab", L=30.0, where=(40.0, 40.0)):
     n_frames = int(round(period * FPS))
     out = OUT / f"{scene}_{mode}"
     (out / "frames").mkdir(parents=True, exist_ok=True)
+    for old in (out / "frames").glob("f*.png"):       # play loops every f*.png: a shorter rebuild leaves none
+        old.unlink()
     t0 = time.perf_counter()
     for i in range(n_frames):
         cv2.imwrite(str(out / "frames" / f"f{i:04d}.png"), pack(subframes(vol, fn, i)))
