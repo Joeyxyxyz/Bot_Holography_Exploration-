@@ -96,9 +96,17 @@ class Volume:
         if key not in self.windows:
             raise ValueError(f"case file has no scene_windows.{key}: these scenes need the DMD windows measured "
                              "for this case position (see configs/case_fit_tank_v4.json)")
-        c0, c1 = (int(c) for c in self.windows[key])
+        v = self.windows[key]
+        if len(v) != 2 or any(float(c) != int(c) for c in v):
+            raise ValueError(f"scene_windows.{key} = {v}: need two whole DMD columns [first, last]")
+        c0, c1 = (int(c) for c in v)
         if not 0 <= c0 < c1 < W:
-            raise ValueError(f"scene_windows.{key} = {self.windows[key]}: need 0 <= first < last < {W}")
+            raise ValueError(f"scene_windows.{key} = {v}: need 0 <= first < last < {W}")
+        if key in ("clean_A", "clean_B") and {"clean_A", "clean_B"} <= set(self.windows):
+            (a0, a1), (b0, b1) = self.windows["clean_A"], self.windows["clean_B"]
+            if not a1 < b0:
+                raise ValueError(f"scene_windows: clean_A {[a0, a1]} must end before clean_B {[b0, b1]} starts "
+                                 "(face A lies left of the corner, face B right of it)")
         return c0, c1
 
     def warp_row_max(self):

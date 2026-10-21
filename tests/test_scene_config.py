@@ -1,8 +1,9 @@
 """Scene windows live in the case config, and moving them there changed no frame (BACKLOG offline 3).
 
-Golden snapshot: SHA-256 of every scene's frame at 4 times across its period, recorded from the code as it was
-BEFORE the windows moved out of vol2/volplay.py (Volume from configs/case_fit_tank_v4.json, mode "ab", the
-bundled duty curve and warp map, no runs/). Matching hashes = byte-identical frames. [PROVED as arithmetic]
+Golden snapshot: SHA-256 of every scene's frame at 4 times across its period (off its quarter-period symmetry),
+recorded from the code as it was BEFORE the windows moved out of vol2/volplay.py (Volume from
+configs/case_fit_tank_v4.json, mode "ab", the bundled duty curve and warp map, no runs/). Matching hashes =
+byte-identical frames. [PROVED as arithmetic]
 Re-record only for an intended change of a scene's output, from the repo root:
   python tests/test_scene_config.py --record
 Moved case: a case file whose windows and rows are shifted moves the lit columns and rows with them, and its
@@ -25,13 +26,13 @@ from vol2 import volplay as vp  # noqa: E402
 
 GOLDEN = Path(__file__).with_name("golden") / "scene_frames_v4.json"
 CASE_JSON = ROOT / "configs" / "case_fit_tank_v4.json"
-N_TIMES = 4
+FRACS = (0.07, 0.31, 0.58, 0.83)    # uneven, so no scene's own half / quarter-period symmetry repeats a frame
 
 
 def frame_hashes(vol, lut, scene):
-    """SHA-256 of the frames at N_TIMES evenly spaced times over the scene's period."""
+    """SHA-256 of the frames at the FRACS fractions of the scene's period."""
     fn = vp.scene_fn(vol, scene)
-    ts = np.linspace(0, vp.PERIODS[scene], N_TIMES, endpoint=False)
+    ts = np.array(FRACS) * vp.PERIODS[scene]
     return [hashlib.sha256(np.ascontiguousarray(vol.frame(fn(t), lut)[0]).tobytes()).hexdigest() for t in ts]
 
 
@@ -87,6 +88,9 @@ def test_shipped_windows_sit_inside_the_fitted_faces():
 # The scenes that light scene windows. A moved window or liquid moves each of them as a whole, except where a
 # wave is phased on the absolute position: ocean_* and fw_ripple on the column, wave_A / waves_AB on the row.
 WINDOW_SCENES = sorted(s for s in vp.SCENES if s.startswith(("wave", "ribbon", "ocean", "plane_", "fw_")))
+# one or two per family for the moved-case renders (every scene is already pinned by the golden test)
+MOVED_SCENES = ["wave_A", "waves_AB", "ribbon", "ribbon_cage", "ocean", "plane_flat", "plane_tilt", "fw_static",
+                "fw_ripple", "fw_ribbon"]
 RIGID_COLS = [s for s in WINDOW_SCENES if not s.startswith("ocean") and s != "fw_ripple"]
 RIGID_ROWS = [s for s in WINDOW_SCENES if s not in ("wave_A", "waves_AB")]
 # even shifts: np.round rounds half to even and the window centres / mid row sit on .5, so an odd shift could
@@ -136,7 +140,7 @@ def test_case_file_windows_reach_the_volume(vol, moved_cols):
     assert moved_cols.window("clean_B") == (697 + D_COL, 748 + D_COL)
 
 
-@pytest.mark.parametrize("scene", WINDOW_SCENES)
+@pytest.mark.parametrize("scene", MOVED_SCENES)
 def test_moved_case_file_moves_the_lit_columns_and_rows(scene, vol, moved_cols, moved_rows, lut):
     """Windows moved D_COL columns move every lit column D_COL; liquid rows moved D_ROW move every lit row D_ROW."""
     fa = _frames(vol, scene, lut)
@@ -218,9 +222,10 @@ def record():
         frames = {s: frame_hashes(vol, lut, s) for s in sorted(vp.SCENES)}
     GOLDEN.parent.mkdir(exist_ok=True)
     GOLDEN.write_text(json.dumps({
-        "note": "SHA-256 of vol2.volplay frames (1140x912x3 uint8, C order) at t = k/4 of each scene's period, "
-                "k = 0..3; Volume(configs/case_fit_tank_v4.json), mode ab, bundled duty curve and warp map. "
-                "Recorded before the scene windows moved into configs/. See tests/test_scene_config.py.",
+        "note": "SHA-256 of vol2.volplay frames (1140x912x3 uint8, C order) at t = (0.07, 0.31, 0.58, 0.83) x "
+                "each scene's period; Volume(configs/case_fit_tank_v4.json), mode ab, bundled duty curve and warp map. "
+                "Recorded from main's code (before the scene windows moved into configs/). "
+                "See tests/test_scene_config.py.",
         "numpy": np.__version__, "frames": frames}, indent=1) + "\n", encoding="utf-8", newline="\n")
     print(f"{GOLDEN}: {len(frames)} scenes")
 
