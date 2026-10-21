@@ -185,3 +185,25 @@ def test_plane_check_puts_digit_k_in_slot_k(out):
         byte, bit = (g, k) if k < 8 else (r, k - 8) if k < 16 else (b, k - 16)
         assert np.array_equal((byte >> bit) & 1 == 1, digits[k]), k
     assert all(not np.array_equal(digits[k], digits[j]) for k in range(24) for j in range(k))   # swaps show
+
+
+# ---------------------------------------------------------------- offline preview: 1440 Hz eye vs 60 Hz video
+def test_preview_of_a_full_duty_static_scene_matches_60hz_and_writes_a_png(out):
+    r = sf.preview("plane_flat")
+    assert (r["mean_abs_diff"], r["max_abs_diff"], r["glow_ratio_1440_over_60"]) == (0.0, 0.0, 1.0)
+    assert r["lit_px"] > 0 and r["tag"] == "[PROVED, simulation]"
+    img = cv2.imread(str(out / "preview" / "plane_flat_ab_f0000.png"), cv2.IMREAD_UNCHANGED)
+    assert img is not None and img.ndim == 2 and img.shape[1] > img.shape[0]
+
+
+def test_preview_of_a_graded_static_scene_differs_by_slot_rounding_only(out):
+    """Static: every slot sees the same duty, so 1440 Hz is off by at most half a slot (1/48) plus the 60 Hz
+    side's 8-bit level rounding through the duty curve (< 0.004)."""
+    r = sf.preview("sphere_round", save=False)
+    assert 0 < r["max_abs_diff"] <= 1 / 48 + 0.004 and abs(r["glow_ratio_1440_over_60"] - 1) < 0.01
+    assert not (out / "preview").exists()
+
+
+def test_preview_of_a_moving_scene_shows_the_smear_but_keeps_the_light(out):
+    r = sf.preview("plane_sweep", frame=240, save=False)          # wraps to frame 0 of the 4 s loop: fastest
+    assert r["frame"] == 0 and r["max_abs_diff"] > 0.5 and abs(r["glow_ratio_1440_over_60"] - 1) < 0.01
