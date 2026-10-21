@@ -24,10 +24,15 @@
      - the 24-plane pack / unpack round trip, and the plane-check digit k in slot k;
      - the slot spread (`_ORDER`): a growing duty lights slots 0, 12, 6, 18, 3, 15, …;
      - the duty rule: round(24·d) slots lit, an exact half rounds down, and a higher duty only adds slots;
-     - `raster_binary`, slot k sampled at t + k/1440, and `build()` output.
+     - `raster_binary`, slot k sampled at t + k/1440, and `build()` output;
+     - an all-zero-duty sub-frame, and an all-zero-duty 60 Hz frame (`Volume.frame`), stay dark: no 0 / 0 renormalisation.
    - Simulated preview: `python -m vol2.subframe preview <scene> [--frame i]` [PROVED, simulation].
-     - It averages a packed frame's 24 slots and compares them with the 60 Hz frame.
-     - Static scenes agree to within half a slot (1/48). Moving scenes smear across the frame (max |diff| 0.96) and keep their total light.
+     - It averages a packed frame's 24 slots and compares them with the 60 Hz frame of the same instant (t = i/60).
+     - Every scene at frames 0, n/4, n/2 and 3n/4 of its loop (2026-10-20):
+       - Static scenes agree to within half a slot (1/48) plus the 60 Hz level rounding: max |diff| 0.022 (`sphere_round`).
+       - Moving scenes smear across the frame (max |diff| up to 0.96).
+       - Total light (glow sum, 1440 / 60 Hz): within 1% in 106 of 118 samples of 30 moving scenes, but 0.940 to 1.069 overall. The outliers are `fw_breathe` (0.940), `orbit` (0.968 and 1.032), `fw_split` (1.069) and `sphere_pulse` (1.018). Not analysed yet.
+       - `fw_stack` and `fwc_stack` frame 0: the 60 Hz frame is empty while slots 22 and 23 already light, so there is no ratio.
      - It assumes every lit slot adds the same glow. That is not measured.
    - Open: the duty is renormalised per sub-frame (and per 60 Hz frame in `volplay`), so changes of duty over time are normalised away.
      - `ball_pulse` renders the same at duty 0.35 and 1.0. The duty breathing of `fw_breathe` and `sphere_pulse` (their size still changes) and the final fade of `fw_stack` are lost the same way.
