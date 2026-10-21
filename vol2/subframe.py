@@ -6,8 +6,10 @@ HDMI frame's 24 bit-planes are shown as 24 one-bit patterns, one after another (
 1-bit video-port patterns up to 2880 Hz). With 24 patterns per 16.667 ms frame each sub-frame lasts ~694 us.
 This module samples a volplay scene 1440 times per second, renders each sample as a 1-bit frame, and packs 24
 consecutive sub-frames into one 24-bit HDMI frame (bit k -> slot k; G0-G7, R0-R7, B0-B7 like flashpack.pack).
-Duty: an element with duty d is lit in round(24 d) of each frame's 24 sub-frames, chosen by a spread
-(bit-reversed) order, so duty is linear (no video-mode dead zone).
+Duty: an element with duty d is lit in round(24 d) of each frame's 24 sub-frames (slot k is on while d > its
+threshold (rank + 0.5) / 24, so an exact half rounds down), chosen by a spread (bit-reversed) order, so duty is
+linear (no video-mode dead zone). d is the duty after absorption compensation, renormalised per sub-frame so
+the sub-frame's brightest element is 1 (volplay renormalises per 60 Hz frame the same way).
 In a linear medium the eye sums the sub-frames: speed buys smooth motion and linear duty, not ghost removal.
 Writes: frames/fNNNN.png (play with: python -m vol2.subframe play <dir>), plane_check.png, procedure.txt.
 FILES ONLY until Joey switches the mode; in Video Mode these frames look like coloured noise.
@@ -99,6 +101,7 @@ def procedure(out: Path) -> str:
     exp = int(1e6 / SUB_HZ) - 4                     # 690 us: inside the 694 us slot
     return "\n".join([
         f"VIDEO-PORT PATTERN MODE (1440 sub-frames/s) for {out}",
+        "FILES ONLY: writing this folder sent nothing to the projector (this code has no USB/HID at all).",
         "Written by the DMD experiments session. Files only; every GUI step is Joey's (4500 MKII GUI, continuous-",
         "limit build). The HDMI desktop stays connected: in this mode the 24 bit-planes of each 60 Hz HDMI frame",
         "are shown as 24 one-bit patterns. Our player keeps feeding those frames.",
