@@ -20,7 +20,10 @@ dev = ["opencv-python-headless>=4.8", "pytest>=7", "pillow>=10"]
 bench = ["opencv-python>=4.8", "pytest>=7", "pillow>=10"]
 
 [tool.setuptools]
-packages = ["rig", "vol2"]
+packages = ["rig", "vol2", "studio"]
+
+[tool.setuptools.package-data]
+studio = ["static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

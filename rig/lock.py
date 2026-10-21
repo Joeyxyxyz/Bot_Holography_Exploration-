@@ -75,6 +75,27 @@ class RigLock:
         self.release()
 
 
+def probe(path: Optional[Path] = None) -> tuple:
+    """(free, holder) for a status display: the lock is tried and released at once and the holder record is
+    not written. A "free" answer can be stale a moment later, so hardware use still goes through acquire()."""
+    p = Path(path) if path else config.LOCK_PATH
+    try:
+        fh = open(p, "rb")                             # read-only: never creates or changes the lock file
+    except FileNotFoundError:
+        return True, ""                                # nobody has ever locked it on this machine
+    except OSError:
+        return False, "lock file unreadable"
+    try:
+        try:
+            _lock(fh)
+        except OSError:
+            return False, RigLock(p).describe_holder()
+        _unlock(fh)
+        return True, ""
+    finally:
+        fh.close()
+
+
 def _lock(fh) -> None:
     if os.name == "nt":
         import msvcrt

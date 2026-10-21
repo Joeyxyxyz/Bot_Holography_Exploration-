@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="holo-token" content="{{TOKEN}}">
+<title>Holo Studio</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="top-row">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <div>
+        <h1>Holo Studio</h1>
+        <p>Shapes of light in the glycerin case</p>
+      </div>
+    </div>
+    <div id="status" class="status">Connecting…</div>
+    <button id="stop" class="stop" type="button" title="Stop anything playing (Esc)">STOP</button>
+  </div>
+  <div id="progress" class="progress" hidden><div class="bar"></div><span class="ptext"></span></div>
+</header>
+<div id="announce" class="sr-only" role="status" aria-live="polite"></div>
+<div id="banner" class="banner" hidden><span class="msg"></span><button type="button" class="close" aria-label="Dismiss">✕</button></div>
+
+<main class="layout">
+  <nav class="scenes" aria-label="Scenes">
+    <div id="groups"><p class="muted">Loading scenes…</p></div>
+  </nav>
+
+  <section class="stage" aria-label="Selected scene">
+    <div class="scene-head">
+      <div>
+        <h2 id="scene-title">&nbsp;</h2>
+        <p id="scene-desc"></p>
+      </div>
+      <div id="scene-tags" class="tags"></div>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Preview">
+      <button type="button" role="tab" id="tab-simulated" data-view="simulated" aria-controls="viewer" aria-selected="true">In the case <small>simulated</small></button>
+      <button type="button" role="tab" id="tab-pattern" data-view="pattern" aria-controls="viewer" aria-selected="false" tabindex="-1">Projector pattern</button>
+      <button type="button" role="tab" id="tab-camera" data-view="camera" aria-controls="viewer" aria-selected="false" tabindex="-1" hidden>On camera <small>real</small></button>
+    </div>
+    <div class="viewer" id="viewer" role="tabpanel" aria-labelledby="tab-simulated">
+      <canvas id="canvas" width="16" height="9" role="img" aria-label="Animated preview"></canvas>
+      <img id="camera-img" alt="Stop-motion camera capture of this scene, 2026-10-05" hidden>
+      <div id="viewer-msg" class="viewer-msg" hidden><span class="spinner" aria-hidden="true"></span><span class="txt"></span></div>
+    </div>
+    <p id="viewer-note" class="viewer-note"></p>
+
+    <div class="controls">
+      <label class="ctl">
+        <span class="name">Duration</span><output id="seconds-out"></output>
+        <input id="seconds" type="range" min="5" max="300" step="5" value="30">
+      </label>
+      <label class="ctl">
+        <span class="name">Speed</span><output id="speed-out"></output>
+        <input id="speed" type="range" min="0.25" max="2" step="0.05" value="1">
+      </label>
+      <label class="ctl">
+        <span class="name">Brightness</span><output id="brightness-out"></output>
+        <input id="brightness" type="range" min="0.3" max="1" step="0.05" value="1">
+      </label>
+      <label class="ctl" id="size-ctl" hidden>
+        <span class="name">Size</span><output id="size-out"></output>
+        <input id="size" type="range" min="0.5" max="1.5" step="0.05" value="1">
+      </label>
+      <fieldset class="ctl faces">
+        <legend class="name">Light from</legend>
+        <label><input type="radio" name="mode" value="ab" checked> Both faces</label>
+        <label><input type="radio" name="mode" value="b"> Face B only</label>
+      </fieldset>
+      <details class="advanced">
+        <summary>Advanced</summary>
+        <label class="ctl">
+          <span class="name">Absorption length</span><output id="L-out"></output>
+          <input id="L" type="range" min="10" max="100" step="5" value="30">
+        </label>
+        <p class="hint">How far the blue light gets into the dyed glycerin before fading. The player boosts deeper
+          parts of a shape to make up for it. 30 mm is a guess until it is measured.</p>
+      </details>
+    </div>
+
+    <div class="actions">
+      <button id="play" class="play" type="button">▶ Play on the projector</button>
+      <button id="add" class="ghost" type="button">+ Add to playlist</button>
+    </div>
+    <p id="play-hint" class="hint"></p>
+  </section>
+
+  <aside class="side">
+    <section class="card">
+      <h3>Playlist</h3>
+      <ol id="playlist" class="playlist"></ol>
+      <p id="pl-empty" class="muted">Add scenes with “+ Add to playlist”, or load the plane demo.</p>
+      <div class="row">
+        <button id="pl-play" type="button">▶ Play all</button>
+        <button id="pl-demo" class="ghost" type="button">Plane demo</button>
+        <button id="pl-clear" class="ghost" type="button">Clear</button>
+      </div>
+      <p id="pl-total" class="hint"></p>
+    </section>
+
+    <section class="card">
+      <h3>Check the case</h3>
+      <p>Shine the numbered grid on the case to check it has not moved. On 2026-10-05 face A was in columns
+        7–10, the corner in 11, face B in 12–14, and the case in rows E–M.</p>
+      <div class="row">
+        <label class="inline">Hold <input id="grid-seconds" type="number" min="5" max="600" step="5" value="60"> s</label>
+        <button id="grid" type="button">Show grid</button>
+      </div>
+      <p id="grid-hint" class="hint"></p>
+    </section>
+
+    <section class="card">
+      <h3>Last run</h3>
+      <div id="last" class="last"><p class="muted">Nothing played yet.</p></div>
+    </section>
+
+    <section class="card safety">
+      <h3>Safety</h3>
+      <ul>
+        <li><b>STOP</b> or <kbd>Esc</kbd> stops at once: the projector goes dark and the rig is released.
+          <kbd>Ctrl</kbd>+<kbd>C</kbd> in the studio's console does the same and closes the studio. Closing this page
+          also stops what it started.</li>
+        <li>The projector is driven over HDMI only. The studio never changes LEDs, modes or firmware.</li>
+        <li>Only one program uses the projector and camera at a time (shared with the scanner).</li>
+        <li>Don't look into the projector lens. Moving the case, focus and cables are Joey's.</li>
+      </ul>
+    </section>
+
+    <details class="card">
+      <summary>Activity</summary>
+      <ol id="log" class="log"></ol>
+    </details>
+  </aside>
+</main>
+<footer class="foot">
+  Volumetric projection in a fluorescent liquid, not holography. Simulated views are approximate.
+</footer>
+</body>
+</html>

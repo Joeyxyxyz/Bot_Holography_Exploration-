@@ -62,3 +62,35 @@ def test_incomplete_warp_run_falls_back_to_bundled(vol, lut, tmp_path, monkeypat
     monkeypatch.setattr(config, "RUNS", tmp_path)
     f = vol.frame(vp.scene_fn(vol, "fwc_static")(0.0), lut)[0]
     assert f[..., 0].any()
+
+
+def _frame_reference(vol, elements, lut, wc=3, wr=5):
+    """The original block-by-block rasteriser (before vectorising Volume.frame), kept as the reference."""
+    dmap = np.zeros((vp.H, vp.W), np.float32)
+    comp = [d * np.exp(t / vol.L) for _, d, t in elements]
+    norm = max(comp) if comp else 1.0
+    for (mirrors, _, _), dc in zip(elements, comp):
+        dd = dc / norm
+        for c, r in mirrors:
+            sl = (slice(max(0, r - wr // 2), min(vp.H, r + wr // 2 + 1)),
+                  slice(max(0, c - wc // 2), min(vp.W, c + wc // 2 + 1)))
+            dmap[sl] = np.maximum(dmap[sl], dd)
+    f = np.zeros((vp.H, vp.W, 3), np.uint8)
+    f[..., 0] = vp.duty_to_level(dmap, lut)
+    return f, norm
+
+
+@pytest.mark.parametrize("scene", SCENES)
+def test_vectorised_frame_is_byte_identical_to_the_original(scene, vol, lut):
+    fn = vp.scene_fn(vol, scene)
+    for t in (0.0, 0.37 * vp.PERIODS[scene]):
+        els = fn(t)
+        f1, n1 = vol.frame(els, lut)
+        f0, n0 = _frame_reference(vol, els, lut)
+        assert n1 == n0 and np.array_equal(f1, f0)
+
+
+def test_frame_gain_scales_duty(vol, lut):
+    els = vp.scene_fn(vol, "fw_static")(0.0)
+    full, half = vol.frame(els, lut)[0][..., 0], vol.frame(els, lut, gain=0.5)[0][..., 0]
+    assert full.max() == 255 and 0 < half.max() < 255 and ((half > 0) <= (full > 0)).all()

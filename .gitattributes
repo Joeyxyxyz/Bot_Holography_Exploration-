@@ -3,3 +3,4 @@
 *.png binary
 *.gif binary
 *.npz binary
+*.bat text eol=crlf

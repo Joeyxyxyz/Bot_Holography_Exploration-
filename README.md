@@ -26,6 +26,30 @@ These experiments put light shapes inside a small liquid-filled case with a **st
 
 The full story with every number and caveat is in [docs/BRIEFING.md](docs/BRIEFING.md). The running log is [docs/LAB_LOG.md](docs/LAB_LOG.md).
 
+## Holo Studio: the easy way to play scenes
+
+```bash
+python -m studio
+```
+
+This opens a page in your browser (served only on `127.0.0.1`):
+
+- **Pick a scene** from 36 in five groups (ribbons, waves, planes, planes corrected for the camera's view, solid shapes), each with a short description.
+- **Preview it three ways:**
+  - *in the case*: a simulation of the glow, seen from the camera side and from above;
+  - *projector pattern*: what the mirrors send;
+  - *on camera*: the real stop-motion capture, for the 8 scenes that have one.
+- **Adjust** duration, speed, brightness, size (solid shapes), and whether light comes from both faces or face B only.
+- **Play** on the projector. The big **STOP** button or the Esc key stops at once. Ctrl+C in the console stops too, and closes the studio.
+- **Playlists:** build your own, or load the plane demo.
+- **Check the case:** shine the numbered grid on it to check it hasn't moved.
+
+**On Windows:** double-click `tools\holo_studio.bat`. Set `HOLO_PYTHON` once to your environment's `python.exe`; quotes around the path are fine.
+
+**To try it without the projector:** set `DLP_NO_HARDWARE=1` first. Everything works except playing on the projector (Play, playlists and the grid).
+
+The studio drives the projector only through `rig/`, the same as the command-line player, and other web pages can't control it. Closing the page stops what it started. See [SAFETY.md](SAFETY.md#holo-studio).
+
 ## Quick start (offline, any OS)
 
 ```bash
@@ -66,13 +90,14 @@ Calibration, sub-frame packing and the other commands are in [docs/BRIEFING.md Â
 | `rig/` | **The only hardware layer:** rig lock, HDMI window, camera, `Bench`, and the safety guards |
 | `vol2/` | Two-face ray model (Snell, TIR, walk-off), rendering, simulation, scenes, the 60 Hz player, calibration, the 1440 Hz sub-frame and flash-pack writers |
 | `holo/` | Holography design and simulation (Fresnel cube, LED coherence study); no hardware holography. `holo_show.py` holds a frame on the bench through `rig/` |
-| `tools/` | Bench helpers: numbered grid, frame hold loop, capture sets, GIF makers, a demo playlist |
+| `studio/` | **Holo Studio**, the local web UI (`python -m studio`): scene catalogue, previews and simulated views, playback through `rig/` |
+| `tools/` | Bench helpers: numbered grid, frame hold loop, capture sets, GIF makers, a demo playlist, the studio launcher |
 | `configs/` | Bench records, case maps (from projected-grid call-outs) and fitted case geometry |
 | `data/calibration/` | The bundled duty curve and warp map (bench, 2026-10-05) |
 | `data/results/` | Measured results and simulation reports |
 | `docs/` | Briefing, lab log, first-day results, figures |
 | `third_party/OGR_DMD_MathPackage_v1.0/` | Joey's OGR DMD math package and its Lean files (`ogr.validate`: 31/31); see Licence |
-| `tests/` | Offline tests: model, scenes, OGR, and the machine-safety rules |
+| `tests/` | Offline tests: model, scenes, studio, OGR, and the machine-safety rules |
 
 ## Working on this with Claude
 
